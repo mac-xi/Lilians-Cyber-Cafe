@@ -28,6 +28,40 @@
     </script>
 </head>
 <body>
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen">
+        <div class="login-container">
+            <div class="login-logo">
+                <div class="logo-icon-large"><i class="fas fa-dragon"></i></div>
+                <div class="logo-text-large">
+                    <div class="logo-main glitch-text" data-text="LILIAN'S">LILIAN'S</div>
+                    <div class="logo-sub">CYBER CAFÉ</div>
+                </div>
+            </div>
+            <div class="login-form">
+                <h2 class="glitch-text" data-text="AUTHENTICATE">AUTHENTICATE</h2>
+                <p class="login-desc">Restricted Access — Authorized Personnel Only</p>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="login-username" placeholder="Enter username..." autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" placeholder="Enter password...">
+                </div>
+                <button class="btn-cyber" id="login-btn" onclick="attemptLogin()">
+                    <i class="fas fa-lock"></i>
+                    <span>ACCESS TERMINAL</span>
+                    <div class="btn-glow"></div>
+                </button>
+                <div class="login-error" id="login-error"></div>
+            </div>
+            <div class="login-footer">
+                <span>Shadow Terminal v2.1</span>
+            </div>
+        </div>
+    </div>
+
     <!-- LOADING SCREEN -->
     <div id="loading-screen">
         <div class="loader-container">
@@ -157,8 +191,8 @@
                                 </div>
                             </div>
                             <div class="profile-menu">
-                                <button class="profile-item" onclick="showToast('Profile settings coming soon!', 'info')">
-                                    <i class="fas fa-user-cog"></i><span>Profile Settings</span>
+                                <button class="profile-item" onclick="changePassword(); closeAllDropdowns();">
+                                    <i class="fas fa-key"></i><span>Change Password</span>
                                 </button>
                                 <button class="profile-item" onclick="showToast('Business settings coming soon!', 'info')">
                                     <i class="fas fa-store"></i><span>Business Settings</span>

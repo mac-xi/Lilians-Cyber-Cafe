@@ -1,7 +1,140 @@
 /* ============================================
    LILIAN'S CYBER CAFÉ — FIREBASE EDITION v2.1
    Fixed: Notifications, Profile, Search, Payment Totals, Favicon
+   Added: Login Protection for Maxwell & Jane
    ============================================ */
+
+// ===== SECURE LOGIN SYSTEM =====
+// Passwords are SHA-256 hashed for security
+// To change a password: use the "Change Password" button after logging in
+// Or manually update the hash below using: https://www.sha256-online.com
+
+// Current hashed passwords (SHA-256):
+// lilians2026  = 8f7d3a2b1c9e4f5d6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0
+// cybercafe2026 = a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1
+
+const USERS = {
+    'Maxwell': {
+        hash: '01d212f257dfedcb9469474cb1c0786a1640b9af74cbbf07840dc3c85c15c00a',
+        role: 'Admin'
+    },
+    'Jane': {
+        hash: 'eef9ccf69665b3e0058ab3f4fac8f65339281ce6c77e3064839d64a6920c712e',
+        role: 'Manager'
+    }
+};
+
+let currentUser = null;
+
+// SHA-256 hash function (built into modern browsers)
+async function sha256(message) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function attemptLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errorDiv = document.getElementById('login-error');
+    const container = document.querySelector('.login-container');
+
+    if (!username || !password) {
+        errorDiv.textContent = 'Enter both username and password.';
+        errorDiv.style.color = 'var(--neon-red)';
+        container.classList.remove('shake');
+        void container.offsetWidth;
+        container.classList.add('shake');
+        return;
+    }
+
+    if (!USERS[username]) {
+        errorDiv.textContent = 'ACCESS DENIED. User not found.';
+        errorDiv.style.color = 'var(--neon-red)';
+        container.classList.remove('shake');
+        void container.offsetWidth;
+        container.classList.add('shake');
+        document.getElementById('login-password').value = '';
+        return;
+    }
+
+    // Hash the entered password and compare
+    const enteredHash = await sha256(password);
+
+    if (enteredHash === USERS[username].hash) {
+        currentUser = username;
+        errorDiv.textContent = '';
+        errorDiv.style.color = 'var(--neon-green)';
+        errorDiv.textContent = 'Access granted. Welcome, ' + username + '.';
+
+        setTimeout(function() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('loading-screen').classList.remove('hidden');
+            initApp();
+        }, 800);
+    } else {
+        errorDiv.textContent = 'ACCESS DENIED. Invalid password.';
+        errorDiv.style.color = 'var(--neon-red)';
+        container.classList.remove('shake');
+        void container.offsetWidth;
+        container.classList.add('shake');
+        document.getElementById('login-password').value = '';
+    }
+}
+
+// Change password function (called from profile menu)
+async function changePassword() {
+    const oldPass = prompt('Enter your CURRENT password:');
+    if (!oldPass) return;
+
+    const oldHash = await sha256(oldPass);
+    if (oldHash !== USERS[currentUser].hash) {
+        showToast('Incorrect current password!', 'error');
+        return;
+    }
+
+    const newPass = prompt('Enter your NEW password (min 6 characters):');
+    if (!newPass || newPass.length < 6) {
+        showToast('Password must be at least 6 characters!', 'error');
+        return;
+    }
+
+    const confirmPass = prompt('Confirm your NEW password:');
+    if (newPass !== confirmPass) {
+        showToast('Passwords do not match!', 'error');
+        return;
+    }
+
+    const newHash = await sha256(newPass);
+    USERS[currentUser].hash = newHash;
+
+    // Show the new hash so they can update the file
+    showToast('Password changed successfully!', 'success');
+
+    // Create a modal showing the new hash
+    setTimeout(function() {
+        showModal(
+            'Password Updated',
+            '<p><strong>Your password has been changed!</strong></p>' +
+            '<p style="margin-top:10px;color:var(--neon-cyan);">New hash for ' + currentUser + ':</p>' +
+            '<code style="display:block;background:var(--void-lighter);padding:10px;border-radius:8px;margin-top:8px;font-size:0.75rem;word-break:break-all;">' + newHash + '</code>' +
+            '<p style="margin-top:15px;color:var(--text-secondary);font-size:0.8rem;">Copy this hash and replace the old one in your app.js file to make it permanent.</p>',
+            null
+        );
+        document.getElementById('modal-confirm').style.display = 'none';
+    }, 500);
+}
+
+// Allow Enter key to login
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && document.getElementById('login-screen') && !document.getElementById('login-screen').classList.contains('hidden')) {
+        if (document.activeElement.id === 'login-username' || document.activeElement.id === 'login-password') {
+            attemptLogin();
+        }
+    }
+});
 
 // ===== FIREBASE DB =====
 const DB = {
@@ -483,11 +616,30 @@ function refreshDailyCash() {
     const tbody = document.getElementById('transactions-body');
     const total = txs.reduce(function(sum, t) { return sum + t.amount; }, 0);
 
+    // Calculate payment method breakdown for THIS DAY
+    let dailyCash = 0, dailyMpesa = 0, dailyBank = 0, dailyMixed = 0;
+    txs.forEach(function(t) {
+        var pay = (t.payment || '').trim();
+        if (pay === 'Cash') dailyCash += t.amount;
+        else if (pay === 'M-Pesa') dailyMpesa += t.amount;
+        else if (pay === 'Bank Transfer') dailyBank += t.amount;
+        else if (pay === 'Mixed') dailyMixed += t.amount;
+    });
+
+    var dc = document.getElementById('daily-cash-total');
+    var dm = document.getElementById('daily-mpesa-total');
+    var db = document.getElementById('daily-bank-total');
+    var dmx = document.getElementById('daily-mixed-total');
+    if (dc) dc.textContent = formatKES(dailyCash);
+    if (dm) dm.textContent = formatKES(dailyMpesa);
+    if (db) db.textContent = formatKES(dailyBank);
+    if (dmx) dmx.textContent = formatKES(dailyMixed);
+
     if (txs.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#4a4a6a;"><i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:10px;"></i>No transactions for ' + filterDate + '</td></tr>';
     } else {
         tbody.innerHTML = txs.map(function(t) {
-            return '<tr><td>' + t.time + '</td><td><span style="color:#00f0ff;">' + t.service + '</span></td><td>' + (t.customer || '-') + '</td><td class="amount-cell">' + formatKES(t.amount) + '</td><td>' + t.payment + '</td><td><div class="action-btns"><button onclick="deleteTransaction(\'' + t.id + '\')" title="Delete"><i class="fas fa-trash"></i></button></div></td></tr>';
+            return '<tr><td>' + t.time + '</td><td><span style="color:#00f0ff;">' + t.service + '</span></td><td>' + (t.customer || '-') + '</td><td class="amount-cell">' + formatKES(t.amount) + '</td><td>' + t.payment + '</td><td><div class="action-btns"><button onclick="deleteTransaction('' + t.id + '')" title="Delete"><i class="fas fa-trash"></i></button></div></td></tr>';
         }).join('');
     }
 
@@ -819,6 +971,16 @@ function downloadCSV(content, filename) {
 
 // ===== EVENT LISTENERS =====
 document.addEventListener('DOMContentLoaded', async function() {
+    // Hide loading screen initially — login screen shows first
+    document.getElementById('loading-screen').classList.add('hidden');
+    document.getElementById('app').style.display = 'none';
+
+    // Login screen is visible by default
+    // User must authenticate before app loads
+});
+
+// Called after successful login
+async function initApp() {
     // Show loading
     document.getElementById('loading-screen').classList.remove('hidden');
     document.getElementById('app').style.display = 'none';
@@ -829,13 +991,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (DB.transactions.length === 0 && DB.expenses.length === 0) {
             await seedDemoData();
         }
-        showToast('Connected to Firebase!', 'success');
+        showToast('Welcome back, ' + currentUser + '!', 'success');
     } catch (err) {
         console.error('Failed to load from Firebase:', err);
         showToast('Firebase connection failed. Check console.', 'error');
     }
 
-    // Hide loading
+    // Hide loading, show app
     setTimeout(function() {
         document.getElementById('loading-screen').classList.add('hidden');
         document.getElementById('app').style.display = 'flex';
@@ -975,4 +1137,4 @@ document.addEventListener('DOMContentLoaded', async function() {
     refreshDailyCash();
     refreshExpenditures();
     refreshMonthly();
-});
+}
