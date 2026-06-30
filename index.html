@@ -351,6 +351,39 @@
                                     <button class="btn-icon" onclick="exportDailyCash()" title="Export CSV"><i class="fas fa-download"></i></button>
                                 </div>
                             </div>
+
+                            <!-- DAILY PAYMENT BREAKDOWN -->
+                            <div class="daily-payment-breakdown">
+                                <div class="daily-pay-item cash">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    <div>
+                                        <span class="daily-pay-label">Cash</span>
+                                        <span class="daily-pay-value" id="daily-cash-total">KES 0.00</span>
+                                    </div>
+                                </div>
+                                <div class="daily-pay-item mpesa">
+                                    <i class="fas fa-mobile-alt"></i>
+                                    <div>
+                                        <span class="daily-pay-label">M-Pesa</span>
+                                        <span class="daily-pay-value" id="daily-mpesa-total">KES 0.00</span>
+                                    </div>
+                                </div>
+                                <div class="daily-pay-item bank">
+                                    <i class="fas fa-university"></i>
+                                    <div>
+                                        <span class="daily-pay-label">Bank</span>
+                                        <span class="daily-pay-value" id="daily-bank-total">KES 0.00</span>
+                                    </div>
+                                </div>
+                                <div class="daily-pay-item mixed">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    <div>
+                                        <span class="daily-pay-label">Mixed</span>
+                                        <span class="daily-pay-value" id="daily-mixed-total">KES 0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="transaction-table-container">
                                 <table class="cyber-table" id="transactions-table">
                                     <thead><tr><th>Time</th><th>Service</th><th>Customer</th><th>Amount</th><th>Method</th><th>Actions</th></tr></thead>

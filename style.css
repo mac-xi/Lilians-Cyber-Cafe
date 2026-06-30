@@ -1228,3 +1228,109 @@ body {
         border-bottom: none;
     }
 }
+
+
+/* ===== DAILY PAYMENT BREAKDOWN (in Daily Cash page) ===== */
+.daily-payment-breakdown {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    padding: 0;
+    border-bottom: 1px solid var(--void-lighter);
+}
+
+.daily-pay-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px;
+    border-right: 1px solid var(--void-lighter);
+    transition: var(--transition);
+    cursor: default;
+}
+
+.daily-pay-item:last-child {
+    border-right: none;
+}
+
+.daily-pay-item:hover {
+    background: var(--void-lighter);
+}
+
+.daily-pay-item i {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.daily-pay-item.cash i {
+    background: rgba(0, 255, 136, 0.15);
+    color: var(--neon-green);
+}
+
+.daily-pay-item.mpesa i {
+    background: rgba(0, 240, 255, 0.15);
+    color: var(--neon-cyan);
+}
+
+.daily-pay-item.bank i {
+    background: rgba(255, 215, 0, 0.15);
+    color: var(--neon-gold);
+}
+
+.daily-pay-item.mixed i {
+    background: rgba(255, 0, 160, 0.15);
+    color: var(--neon-magenta);
+}
+
+.daily-pay-item div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.daily-pay-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.daily-pay-value {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+@media (max-width: 900px) {
+    .daily-payment-breakdown {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .daily-pay-item:nth-child(2) {
+        border-right: none;
+    }
+    .daily-pay-item:nth-child(1),
+    .daily-pay-item:nth-child(2) {
+        border-bottom: 1px solid var(--void-lighter);
+    }
+}
+
+@media (max-width: 500px) {
+    .daily-payment-breakdown {
+        grid-template-columns: 1fr;
+    }
+    .daily-pay-item {
+        border-right: none;
+        border-bottom: 1px solid var(--void-lighter);
+    }
+    .daily-pay-item:last-child {
+        border-bottom: none;
+    }
+}
