@@ -4,600 +4,419 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lilian's Cyber Café | Shadow Terminal</title>
-    <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2300f0ff'/><text y='.9em' x='50%' text-anchor='middle' font-size='60' fill='%230a0a0f'>🐉</text></svg>">
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- FIREBASE SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-    <script>
-      const firebaseConfig = {
-        apiKey: "AIzaSyBs0nVjpwtMjtzbSuGDYG4MoctcVPjiP10",
-        authDomain: "lilian-s-cyber-cafe.firebaseapp.com",
-        projectId: "lilian-s-cyber-cafe",
-        storageBucket: "lilian-s-cyber-cafe.firebasestorage.app",
-        messagingSenderId: "139202749363",
-        appId: "1:139202749363:web:a3614c292bcff6b486a1c6"
-      };
-      firebase.initializeApp(firebaseConfig);
-      const db = firebase.firestore();
-      db.enablePersistence({ synchronizeTabs: true }).catch(err => console.log('Persistence error:', err));
-    </script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- LOGIN SCREEN -->
-    <div id="login-screen">
-        <div class="login-container">
-            <div class="login-logo">
-                <div class="logo-icon-large"><i class="fas fa-dragon"></i></div>
-                <div class="logo-text-large">
-                    <div class="logo-main glitch-text" data-text="LILIAN'S">LILIAN'S</div>
-                    <div class="logo-sub">CYBER CAFÉ</div>
-                </div>
-            </div>
-            <div class="login-form">
-                <h2 class="glitch-text" data-text="AUTHENTICATE">AUTHENTICATE</h2>
-                <p class="login-desc">Restricted Access — Authorized Personnel Only</p>
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="login-username" placeholder="Enter username..." autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="login-password" placeholder="Enter password...">
-                </div>
-                <button class="btn-cyber" id="login-btn" onclick="attemptLogin()">
-                    <i class="fas fa-lock"></i>
-                    <span>ACCESS TERMINAL</span>
-                    <div class="btn-glow"></div>
-                </button>
-                <div class="login-error" id="login-error"></div>
-            </div>
-            <div class="login-footer">
-                <span>Shadow Terminal v2.1</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- LOADING SCREEN -->
+    <!-- Loading Screen -->
     <div id="loading-screen">
-        <div class="loader-container">
-            <div class="cyber-spinner"></div>
-            <div class="loader-text">
-                <span class="glitch-text" data-text="INITIALIZING">INITIALIZING</span>
-                <div class="loader-sub">Lilian's Cyber Café System v2.0</div>
-                <div class="loader-progress"><div class="progress-bar"></div></div>
-                <div class="loader-status">Loading modules...</div>
+        <div class="loading-content">
+            <div class="dragon-logo"><img src="favicon.svg" style="width:80px;height:80px;filter:drop-shadow(0 0 20px rgba(0,240,255,0.5));animation:dragonPulse 2s ease-in-out infinite;"></div>
+            <div class="loading-text">INITIALIZING SHADOW TERMINAL</div>
+            <div class="loading-bar"><div class="loading-fill"></div></div>
+            <div class="loading-status">Establishing secure connection...</div>
+        </div>
+    </div>
+
+    <!-- Auth Screen (Login/Register) -->
+    <div id="auth-screen">
+        <div class="auth-container">
+            <div class="auth-logo">
+                <div class="dragon-icon"><img src="favicon.svg" style="width:60px;height:60px;filter:drop-shadow(0 0 15px rgba(0,240,255,0.4));animation:dragonPulse 3s ease-in-out infinite;"></div>
+                <h1 class="glitch-text" data-text="LILIAN'S">LILIAN'S</h1>
+                <p class="auth-subtitle">CYBER CAFÉ // SHADOW TERMINAL</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">LOGIN</button>
+                <button class="auth-tab" data-tab="register">CREATE ACCOUNT</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form active">
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="login-email" placeholder="Email Address" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="login-password" placeholder="Password" required>
+                    <button type="button" class="toggle-password"><i class="fas fa-eye"></i></button>
+                </div>
+                <button type="submit" class="auth-btn">
+                    <i class="fas fa-shield-alt"></i> AUTHENTICATE
+                </button>
+                <p class="auth-error" id="login-error"></p>
+                <a href="#" class="forgot-password" id="forgot-password-link">Forgot Password?</a>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" class="auth-form">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="register-name" placeholder="Full Name" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="register-email" placeholder="Email Address" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="register-password" placeholder="Password (min 6 chars)" required minlength="6">
+                    <button type="button" class="toggle-password"><i class="fas fa-eye"></i></button>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="register-confirm" placeholder="Confirm Password" required>
+                </div>
+                <button type="submit" class="auth-btn">
+                    <i class="fas fa-user-plus"></i> CREATE SECURE ACCOUNT
+                </button>
+                <p class="auth-error" id="register-error"></p>
+            </form>
+
+            <!-- Forgot Password Form -->
+            <form id="forgot-form" class="auth-form">
+                <p class="forgot-info">Enter your email. We'll send a password reset link.</p>
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="forgot-email" placeholder="Email Address" required>
+                </div>
+                <button type="submit" class="auth-btn">
+                    <i class="fas fa-paper-plane"></i> SEND RESET LINK
+                </button>
+                <p class="auth-success" id="forgot-success"></p>
+                <p class="auth-error" id="forgot-error"></p>
+                <a href="#" class="back-to-login" id="back-to-login">← Back to Login</a>
+            </form>
+
+            <div class="auth-security-badge">
+                <i class="fas fa-shield-alt"></i>
+                <span>Secured by Google Firebase Authentication</span>
             </div>
         </div>
     </div>
 
-    <canvas id="particle-canvas"></canvas>
-    <div class="glitch-overlay"></div>
-
-    <div id="app" style="display:none;">
-        <!-- SIDEBAR -->
+    <!-- Main App (Hidden until login) -->
+    <div id="app-container" style="display:none;">
+        <!-- Sidebar -->
         <nav class="sidebar">
-            <div class="logo-section">
-                <div class="logo-icon"><i class="fas fa-dragon"></i></div>
-                <div class="logo-text">
-                    <div class="logo-main glitch-text" data-text="LILIAN'S">LILIAN'S</div>
-                    <div class="logo-sub">CYBER CAFÉ</div>
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="dragon"><img src="favicon.svg" style="width:32px;height:32px;"></span>
+                    <div class="logo-text">
+                        <span class="glitch-text" data-text="LILIAN'S">LILIAN'S</span>
+                        <span class="logo-sub">CYBER CAFÉ</span>
+                    </div>
                 </div>
             </div>
-
-            <div class="nav-menu">
-                <button class="nav-item active" data-section="dashboard">
-                    <i class="fas fa-chart-line"></i><span>Dashboard</span><div class="nav-glow"></div>
-                </button>
-                <button class="nav-item" data-section="daily-cash">
-                    <i class="fas fa-coins"></i><span>Daily Cash</span><div class="nav-glow"></div>
-                </button>
-                <button class="nav-item" data-section="expenditures">
-                    <i class="fas fa-money-bill-wave"></i><span>Expenditures</span><div class="nav-glow"></div>
-                </button>
-                <button class="nav-item" data-section="monthly">
-                    <i class="fas fa-calendar-alt"></i><span>Monthly Records</span><div class="nav-glow"></div>
-                </button>
-                <button class="nav-item" data-section="services">
-                    <i class="fas fa-briefcase"></i><span>Services</span><div class="nav-glow"></div>
-                </button>
-                <button class="nav-item" data-section="analytics">
-                    <i class="fas fa-brain"></i><span>Analytics</span><div class="nav-glow"></div>
-                </button>
-            </div>
-
+            <ul class="nav-menu">
+                <li class="nav-item active" data-section="dashboard">
+                    <i class="fas fa-chart-line"></i><span>Dashboard</span>
+                </li>
+                <li class="nav-item" data-section="daily-cash">
+                    <i class="fas fa-cash-register"></i><span>Daily Cash</span>
+                </li>
+                <li class="nav-item" data-section="expenditures">
+                    <i class="fas fa-wallet"></i><span>Expenditures</span>
+                </li>
+                <li class="nav-item" data-section="monthly">
+                    <i class="fas fa-calendar-alt"></i><span>Monthly Report</span>
+                </li>
+                <li class="nav-item" data-section="services">
+                    <i class="fas fa-briefcase"></i><span>Services</span>
+                </li>
+                <li class="nav-item" data-section="analytics">
+                    <i class="fas fa-brain"></i><span>Neural Analytics</span>
+                </li>
+            </ul>
             <div class="sidebar-footer">
-                <div class="status-indicator">
-                    <div class="status-dot"></div><span>SYSTEM ONLINE</span>
+                <div class="connection-status">
+                    <span class="status-dot online"></span>
+                    <span class="status-text">SYSTEM ONLINE</span>
                 </div>
-                <div class="datetime">
-                    <div id="clock">00:00:00</div>
-                    <div id="date">--/--/----</div>
-                </div>
+                <div class="version">v2.0 // FIREBASE SECURE</div>
             </div>
         </nav>
 
-        <!-- MAIN CONTENT -->
+        <!-- Main Content -->
         <main class="main-content">
-            <!-- TOP BAR -->
+            <!-- Top Bar -->
             <header class="top-bar">
-                <div class="breadcrumb">
-                    <i class="fas fa-home"></i>
-                    <span class="separator">/</span>
-                    <span class="current-page">Dashboard</span>
+                <div class="search-container">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="global-search" placeholder="Search transactions, services...">
+                    <div class="search-results" id="search-results"></div>
                 </div>
                 <div class="top-actions">
-                    <!-- SEARCH -->
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="global-search" placeholder="Search transactions, services...">
-                        <div class="search-dropdown" id="search-dropdown"></div>
-                    </div>
-
-                    <!-- NOTIFICATIONS -->
                     <div class="notification-wrapper">
-                        <button class="btn-icon notification-btn" id="notification-btn">
+                        <button class="icon-btn" id="notification-btn">
                             <i class="fas fa-bell"></i>
-                            <span class="notification-badge" id="notif-badge">3</span>
+                            <span class="badge" id="notif-badge">0</span>
                         </button>
                         <div class="notification-dropdown" id="notification-dropdown">
                             <div class="notif-header">
-                                <h4>Notifications</h4>
-                                <button class="notif-clear" onclick="clearNotifications()">Clear All</button>
+                                <span>Notifications</span>
+                                <button id="clear-notifications">Clear All</button>
                             </div>
-                            <div class="notif-list" id="notif-list">
-                                <div class="notif-item unread">
-                                    <div class="notif-icon"><i class="fas fa-chart-line"></i></div>
-                                    <div class="notif-content">
-                                        <p>Daily target reached! Great work today.</p>
-                                        <span class="notif-time">2 hours ago</span>
-                                    </div>
-                                </div>
-                                <div class="notif-item unread">
-                                    <div class="notif-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                                    <div class="notif-content">
-                                        <p>Low on printer ink. Restock soon.</p>
-                                        <span class="notif-time">5 hours ago</span>
-                                    </div>
-                                </div>
-                                <div class="notif-item">
-                                    <div class="notif-icon"><i class="fas fa-check-circle"></i></div>
-                                    <div class="notif-content">
-                                        <p>Monthly report generated successfully.</p>
-                                        <span class="notif-time">Yesterday</span>
-                                    </div>
-                                </div>
-                            </div>
+                            <div class="notif-list" id="notif-list"></div>
                         </div>
                     </div>
-
-                    <!-- PROFILE -->
                     <div class="profile-wrapper">
-                        <div class="user-profile" id="profile-btn">
-                            <div class="avatar"><i class="fas fa-user-astronaut"></i></div>
-                            <span>Admin</span>
-                            <i class="fas fa-chevron-down" style="font-size:0.7rem;color:#8a8ab5;margin-left:4px;"></i>
-                        </div>
+                        <button class="profile-btn" id="profile-btn">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Maxwell" alt="Profile" id="profile-img">
+                            <span id="profile-name">Maxwell</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
                         <div class="profile-dropdown" id="profile-dropdown">
                             <div class="profile-header">
-                                <div class="avatar-large"><i class="fas fa-user-astronaut"></i></div>
-                                <div class="profile-info">
-                                    <h4>Administrator</h4>
-                                    <span>Lilian's Cyber Café</span>
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Maxwell" alt="Profile">
+                                <div>
+                                    <span id="dropdown-name">Maxwell</span>
+                                    <span id="dropdown-email">maxwell@lilians.com</span>
                                 </div>
                             </div>
                             <div class="profile-menu">
-                                <button class="profile-item" onclick="changePassword(); closeAllDropdowns();">
-                                    <i class="fas fa-key"></i><span>Change Password</span>
-                                </button>
-                                <button class="profile-item" onclick="showToast('Business settings coming soon!', 'info')">
-                                    <i class="fas fa-store"></i><span>Business Settings</span>
-                                </button>
-                                <button class="profile-item" onclick="showToast('Backup feature coming soon!', 'info')">
-                                    <i class="fas fa-cloud-download-alt"></i><span>Backup Data</span>
-                                </button>
-                                <div class="profile-divider"></div>
-                                <button class="profile-item danger" onclick="showToast('Logged out!', 'info')">
-                                    <i class="fas fa-sign-out-alt"></i><span>Logout</span>
-                                </button>
+                                <button id="change-password-btn"><i class="fas fa-key"></i> Change Password</button>
+                                <button id="manage-users-btn"><i class="fas fa-users-cog"></i> Manage Users</button>
+                                <button id="business-settings-btn"><i class="fas fa-cog"></i> Business Settings</button>
+                                <button id="backup-btn"><i class="fas fa-download"></i> Export Data</button>
+                                <div class="divider"></div>
+                                <button id="logout-btn" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <!-- CONTENT AREA -->
+            <!-- Sections -->
             <div class="content-area">
-
-                <!-- DASHBOARD -->
+                <!-- Dashboard -->
                 <section id="dashboard" class="section active">
-                    <div class="section-header">
-                        <h1 class="glitch-text" data-text="COMMAND CENTER">COMMAND CENTER</h1>
-                        <p class="section-desc">Real-time overview of your cyber café empire</p>
-                    </div>
-
-                    <!-- PAYMENT METHOD TOTALS -->
-                    <div class="payment-totals-card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-wallet"></i> Payment Breakdown</h3>
-                        </div>
-                        <div class="payment-totals-grid">
-                            <div class="pay-total-item cash">
-                                <div class="pay-icon"><i class="fas fa-money-bill-wave"></i></div>
-                                <div class="pay-info">
-                                    <span class="pay-label">Cash Total</span>
-                                    <span class="pay-value" id="cash-total">KES 0.00</span>
-                                </div>
-                            </div>
-                            <div class="pay-total-item mpesa">
-                                <div class="pay-icon"><i class="fas fa-mobile-alt"></i></div>
-                                <div class="pay-info">
-                                    <span class="pay-label">M-Pesa Total</span>
-                                    <span class="pay-value" id="mpesa-total">KES 0.00</span>
-                                </div>
-                            </div>
-                            <div class="pay-total-item bank">
-                                <div class="pay-icon"><i class="fas fa-university"></i></div>
-                                <div class="pay-info">
-                                    <span class="pay-label">Bank Total</span>
-                                    <span class="pay-value" id="bank-total">KES 0.00</span>
-                                </div>
-                            </div>
-                            <div class="pay-total-item grand">
-                                <div class="pay-icon"><i class="fas fa-crown"></i></div>
-                                <div class="pay-info">
-                                    <span class="pay-label">Grand Total</span>
-                                    <span class="pay-value" id="grand-total">KES 0.00</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+                    <h2 class="section-title"><i class="fas fa-chart-line"></i> COMMAND CENTER</h2>
                     <div class="stats-grid">
-                        <div class="stat-card primary">
-                            <div class="stat-glow"></div>
-                            <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+                        <div class="stat-card cash">
+                            <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
                             <div class="stat-info">
-                                <div class="stat-label">Today's Revenue</div>
-                                <div class="stat-value" id="today-revenue">KES 0.00</div>
-                                <div class="stat-change positive"><i class="fas fa-arrow-up"></i> <span id="revenue-change">0%</span></div>
+                                <span class="stat-label">Cash Total</span>
+                                <span class="stat-value" id="total-cash">KES 0</span>
                             </div>
                         </div>
-                        <div class="stat-card secondary">
-                            <div class="stat-glow"></div>
-                            <div class="stat-icon"><i class="fas fa-receipt"></i></div>
+                        <div class="stat-card mpesa">
+                            <div class="stat-icon"><i class="fas fa-mobile-alt"></i></div>
                             <div class="stat-info">
-                                <div class="stat-label">Today's Transactions</div>
-                                <div class="stat-value" id="today-transactions">0</div>
-                                <div class="stat-change"><span>Services rendered</span></div>
+                                <span class="stat-label">M-Pesa Total</span>
+                                <span class="stat-value" id="total-mpesa">KES 0</span>
                             </div>
                         </div>
-                        <div class="stat-card accent">
-                            <div class="stat-glow"></div>
-                            <div class="stat-icon"><i class="fas fa-money-bill-trend-up"></i></div>
+                        <div class="stat-card bank">
+                            <div class="stat-icon"><i class="fas fa-university"></i></div>
                             <div class="stat-info">
-                                <div class="stat-label">Monthly Revenue</div>
-                                <div class="stat-value" id="monthly-revenue">KES 0.00</div>
-                                <div class="stat-change"><span id="month-name">This Month</span></div>
+                                <span class="stat-label">Bank Total</span>
+                                <span class="stat-value" id="total-bank">KES 0</span>
                             </div>
                         </div>
-                        <div class="stat-card danger">
-                            <div class="stat-glow"></div>
-                            <div class="stat-icon"><i class="fas fa-fire"></i></div>
+                        <div class="stat-card grand">
+                            <div class="stat-icon"><i class="fas fa-crown"></i></div>
                             <div class="stat-info">
-                                <div class="stat-label">Total Expenditures</div>
-                                <div class="stat-value" id="total-expenditures">KES 0.00</div>
-                                <div class="stat-change negative"><i class="fas fa-arrow-down"></i> <span>Outflow</span></div>
+                                <span class="stat-label">Grand Total</span>
+                                <span class="stat-value" id="total-grand">KES 0</span>
                             </div>
                         </div>
                     </div>
-
                     <div class="dashboard-grid">
-                        <div class="dash-card chart-card">
-                            <div class="card-header">
-                                <h3><i class="fas fa-chart-area"></i> Revenue Pulse</h3>
-                                <div class="card-actions">
-                                    <button class="btn-sm">7D</button>
-                                    <button class="btn-sm active">30D</button>
-                                </div>
-                            </div>
-                            <div class="chart-container"><canvas id="revenue-chart"></canvas></div>
+                        <div class="dashboard-card">
+                            <h3><i class="fas fa-clock"></i> Today's Activity</h3>
+                            <div class="activity-list" id="today-activity"></div>
                         </div>
-                        <div class="dash-card recent-card">
-                            <div class="card-header">
-                                <h3><i class="fas fa-bolt"></i> Recent Transactions</h3>
-                                <button class="btn-sm" onclick="navigateTo('daily-cash')">View All</button>
-                            </div>
-                            <div class="recent-list" id="recent-transactions">
-                                <div class="empty-state"><i class="fas fa-ghost"></i><p>No transactions yet. Start logging!</p></div>
-                            </div>
+                        <div class="dashboard-card">
+                            <h3><i class="fas fa-fire"></i> Top Services</h3>
+                            <div class="top-services" id="top-services"></div>
                         </div>
-                    </div>
-
-                    <div class="dash-card services-preview">
-                        <div class="card-header"><h3><i class="fas fa-rocket"></i> Top Services</h3></div>
-                        <div class="services-grid" id="top-services"></div>
                     </div>
                 </section>
 
-                <!-- DAILY CASH -->
+                <!-- Daily Cash -->
                 <section id="daily-cash" class="section">
-                    <div class="section-header">
-                        <h1 class="glitch-text" data-text="DAILY CASH LOG">DAILY CASH LOG</h1>
-                        <p class="section-desc">Track every shilling. Every day. No exceptions.</p>
+                    <h2 class="section-title"><i class="fas fa-cash-register"></i> DAILY CASH LOG</h2>
+                    <div class="date-filter">
+                        <input type="date" id="daily-date" value="">
+                        <button class="btn-primary" id="add-transaction-btn"><i class="fas fa-plus"></i> New Transaction</button>
                     </div>
-                    <div class="cash-layout">
-                        <div class="cash-form-card">
-                            <div class="card-header"><h3><i class="fas fa-plus-circle"></i> New Transaction</h3></div>
-                            <form id="transaction-form" class="cyber-form">
-                                <div class="form-row">
-                                    <div class="form-group"><label>Date</label><input type="date" id="trans-date" required></div>
-                                    <div class="form-group"><label>Time</label><input type="time" id="trans-time" required></div>
-                                </div>
-                                <div class="form-group">
-                                    <label>Service Type</label>
-                                    <select id="trans-service" required>
-                                        <option value="">Select Service...</option>
-                                        <option value="E-Citizen">E-Citizen Portal</option>
-                                        <option value="Arhisasa">Arhisasa</option>
-                                        <option value="SHA">SHA (Social Health Authority)</option>
-                                        <option value="KRA">KRA (iTax)</option>
-                                        <option value="NTSA">NTSA</option>
-                                        <option value="HELB">HELB</option>
-                                        <option value="Passport">Passport Application</option>
-                                        <option value="Driving License">Driving License</option>
-                                        <option value="Good Conduct">Certificate of Good Conduct</option>
-                                        <option value="Business Registration">Business Registration</option>
-                                        <option value="Cyber Services">Cyber Services (Typing/Printing)</option>
-                                        <option value="Photocopy">Photocopy</option>
-                                        <option value="Scanning">Scanning</option>
-                                        <option value="Lamination">Lamination</option>
-                                        <option value="Passport Photos">Passport Photos</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div class="form-group"><label>Customer Name</label><input type="text" id="trans-customer" placeholder="Enter customer name..."></div>
-                                <div class="form-row">
-                                    <div class="form-group"><label>Amount (KES)</label><input type="number" id="trans-amount" placeholder="0.00" min="0" step="0.01" required></div>
-                                    <div class="form-group">
-                                        <label>Payment Method</label>
-                                        <select id="trans-payment">
-                                            <option value="Cash">Cash</option>
-                                            <option value="M-Pesa">M-Pesa</option>
-                                            <option value="Bank Transfer">Bank Transfer</option>
-                                            <option value="Mixed">Mixed</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-group"><label>Notes / Description</label><textarea id="trans-notes" rows="2" placeholder="Any additional details..."></textarea></div>
-                                <button type="submit" class="btn-cyber"><i class="fas fa-save"></i><span>LOG TRANSACTION</span><div class="btn-glow"></div></button>
-                            </form>
-                        </div>
-                        <div class="cash-list-card">
-                            <div class="card-header">
-                                <h3><i class="fas fa-list-alt"></i> Today's Log</h3>
-                                <div class="header-actions">
-                                    <input type="date" id="filter-date" class="date-filter">
-                                    <button class="btn-icon" onclick="exportDailyCash()" title="Export CSV"><i class="fas fa-download"></i></button>
-                                </div>
-                            </div>
-
-                            <!-- DAILY PAYMENT BREAKDOWN -->
-                            <div class="daily-payment-breakdown">
-                                <div class="daily-pay-item cash">
-                                    <i class="fas fa-money-bill-wave"></i>
-                                    <div>
-                                        <span class="daily-pay-label">Cash</span>
-                                        <span class="daily-pay-value" id="daily-cash-total">KES 0.00</span>
-                                    </div>
-                                </div>
-                                <div class="daily-pay-item mpesa">
-                                    <i class="fas fa-mobile-alt"></i>
-                                    <div>
-                                        <span class="daily-pay-label">M-Pesa</span>
-                                        <span class="daily-pay-value" id="daily-mpesa-total">KES 0.00</span>
-                                    </div>
-                                </div>
-                                <div class="daily-pay-item bank">
-                                    <i class="fas fa-university"></i>
-                                    <div>
-                                        <span class="daily-pay-label">Bank</span>
-                                        <span class="daily-pay-value" id="daily-bank-total">KES 0.00</span>
-                                    </div>
-                                </div>
-                                <div class="daily-pay-item mixed">
-                                    <i class="fas fa-exchange-alt"></i>
-                                    <div>
-                                        <span class="daily-pay-label">Mixed</span>
-                                        <span class="daily-pay-value" id="daily-mixed-total">KES 0.00</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="transaction-table-container">
-                                <table class="cyber-table" id="transactions-table">
-                                    <thead><tr><th>Time</th><th>Service</th><th>Customer</th><th>Amount</th><th>Method</th><th>Actions</th></tr></thead>
-                                    <tbody id="transactions-body"></tbody>
-                                    <tfoot><tr class="total-row"><td colspan="3"><strong>DAILY TOTAL</strong></td><td colspan="3"><strong id="daily-total">KES 0.00</strong></td></tr></tfoot>
-                                </table>
-                            </div>
-                        </div>
+                    <div class="daily-payment-breakdown">
+                        <div class="dpb-card cash"><i class="fas fa-money-bill-wave"></i><div><span class="dpb-label">Cash</span><span class="dpb-value" id="daily-cash-total">KES 0</span></div></div>
+                        <div class="dpb-card mpesa"><i class="fas fa-mobile-alt"></i><div><span class="dpb-label">M-Pesa</span><span class="dpb-value" id="daily-mpesa-total">KES 0</span></div></div>
+                        <div class="dpb-card bank"><i class="fas fa-university"></i><div><span class="dpb-label">Bank</span><span class="dpb-value" id="daily-bank-total">KES 0</span></div></div>
+                        <div class="dpb-card mixed"><i class="fas fa-exchange-alt"></i><div><span class="dpb-label">Mixed</span><span class="dpb-value" id="daily-mixed-total">KES 0</span></div></div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>Time</th><th>Service</th><th>Customer</th><th>Amount</th><th>Payment</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody id="daily-transactions"></tbody>
+                            <tfoot>
+                                <tr class="total-row"><td colspan="3"><strong>Daily Total</strong></td><td colspan="3"><strong id="daily-total">KES 0</strong></td></tr>
+                            </tfoot>
+                        </table>
                     </div>
                 </section>
 
-                <!-- EXPENDITURES -->
+                <!-- Expenditures -->
                 <section id="expenditures" class="section">
-                    <div class="section-header">
-                        <h1 class="glitch-text" data-text="EXPENDITURE TRACKER">EXPENDITURE TRACKER</h1>
-                        <p class="section-desc">Know where every coin goes. Control the outflow.</p>
-                    </div>
-                    <div class="exp-layout">
-                        <div class="exp-form-card">
-                            <div class="card-header"><h3><i class="fas fa-minus-circle"></i> Record Expense</h3></div>
-                            <form id="expense-form" class="cyber-form">
+                    <h2 class="section-title"><i class="fas fa-wallet"></i> EXPENDITURE TRACKER</h2>
+                    <div class="expense-header">
+                        <div class="expense-chart-container">
+                            <canvas id="expense-chart"></canvas>
+                        </div>
+                        <div class="expense-form-wrapper">
+                            <h3><i class="fas fa-plus-circle"></i> Log Expense</h3>
+                            <form id="expense-form">
                                 <div class="form-row">
-                                    <div class="form-group"><label>Date</label><input type="date" id="exp-date" required></div>
-                                    <div class="form-group">
-                                        <label>Category</label>
-                                        <select id="exp-category" required>
-                                            <option value="">Select Category...</option>
-                                            <option value="Rent">Shop Rent</option>
-                                            <option value="Electricity">Electricity / Power</option>
-                                            <option value="Internet">Internet / WiFi</option>
-                                            <option value="Stationery">Stationery & Supplies</option>
-                                            <option value="Printer Ink">Printer Ink & Toner</option>
-                                            <option value="Computer Maintenance">Computer Maintenance</option>
-                                            <option value="Software Licenses">Software / Portal Licenses</option>
-                                            <option value="Transport">Transport / Fuel</option>
-                                            <option value="Food">Food / Meals</option>
-                                            <option value="Salaries">Staff Salaries</option>
-                                            <option value="Taxes">Taxes / Levies</option>
-                                            <option value="Miscellaneous">Miscellaneous</option>
+                                    <div class="form-group"><label>Date</label><input type="date" id="expense-date" required></div>
+                                    <div class="form-group"><label>Category</label>
+                                        <select id="expense-category" required>
+                                            <option value="">Select...</option>
+                                            <option>Rent</option><option>Internet</option><option>Electricity</option>
+                                            <option>Stationery</option><option>Maintenance</option><option>Salaries</option>
+                                            <option>Food & Drinks</option><option>Transport</option><option>Other</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div class="form-group"><label>Description</label><input type="text" id="exp-description" placeholder="What was this for?" required></div>
                                 <div class="form-row">
-                                    <div class="form-group"><label>Amount (KES)</label><input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01" required></div>
-                                    <div class="form-group">
-                                        <label>Payment Method</label>
-                                        <select id="exp-payment"><option value="Cash">Cash</option><option value="M-Pesa">M-Pesa</option><option value="Bank">Bank</option></select>
-                                    </div>
+                                    <div class="form-group"><label>Description</label><input type="text" id="expense-desc" placeholder="What was this for?" required></div>
+                                    <div class="form-group"><label>Amount (KES)</label><input type="number" id="expense-amount" min="0" required></div>
                                 </div>
-                                <div class="form-group"><label>Receipt / Reference</label><input type="text" id="exp-reference" placeholder="Receipt number or reference..."></div>
-                                <button type="submit" class="btn-cyber danger"><i class="fas fa-save"></i><span>RECORD EXPENSE</span><div class="btn-glow"></div></button>
+                                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Record Expense</button>
                             </form>
                         </div>
-                        <div class="exp-list-card">
-                            <div class="card-header">
-                                <h3><i class="fas fa-fire-alt"></i> Expense Log</h3>
-                                <div class="header-actions">
-                                    <select id="exp-filter-month" class="month-filter"><option value="all">All Time</option></select>
-                                    <button class="btn-icon" onclick="exportExpenses()" title="Export CSV"><i class="fas fa-download"></i></button>
-                                </div>
-                            </div>
-                            <div class="expense-chart-container"><canvas id="expense-chart"></canvas></div>
-                            <div class="transaction-table-container">
-                                <table class="cyber-table" id="expenses-table">
-                                    <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Actions</th></tr></thead>
-                                    <tbody id="expenses-body"></tbody>
-                                    <tfoot><tr class="total-row"><td colspan="3"><strong>TOTAL EXPENDITURES</strong></td><td colspan="2"><strong id="exp-total">KES 0.00</strong></td></tr></tfoot>
-                                </table>
-                            </div>
-                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Actions</th></tr></thead>
+                            <tbody id="expenses-list"></tbody>
+                        </table>
                     </div>
                 </section>
 
-                <!-- MONTHLY -->
+                <!-- Monthly Report -->
                 <section id="monthly" class="section">
-                    <div class="section-header">
-                        <h1 class="glitch-text" data-text="MONTHLY ARCHIVES">MONTHLY ARCHIVES</h1>
-                        <p class="section-desc">Your financial history. Every month. Every record.</p>
+                    <h2 class="section-title"><i class="fas fa-calendar-alt"></i> MONTHLY ARCHIVE</h2>
+                    <div class="month-selector">
+                        <button id="prev-month"><i class="fas fa-chevron-left"></i></button>
+                        <span id="current-month-label"></span>
+                        <button id="next-month"><i class="fas fa-chevron-right"></i></button>
+                        <button class="btn-secondary" id="export-monthly"><i class="fas fa-file-csv"></i> Export CSV</button>
                     </div>
-                    <div class="monthly-controls">
-                        <div class="month-selector">
-                            <button class="btn-icon" id="prev-month"><i class="fas fa-chevron-left"></i></button>
-                            <div class="current-month-display"><span id="display-month">June 2026</span></div>
-                            <button class="btn-icon" id="next-month"><i class="fas fa-chevron-right"></i></button>
-                        </div>
-                        <button class="btn-cyber btn-sm" onclick="generateMonthlyReport()"><i class="fas fa-file-invoice"></i> Generate Report</button>
+                    <div class="monthly-summary">
+                        <div class="summary-card income"><i class="fas fa-arrow-up"></i><div><span>Total Income</span><strong id="month-income">KES 0</strong></div></div>
+                        <div class="summary-card expense"><i class="fas fa-arrow-down"></i><div><span>Total Expenses</span><strong id="month-expense">KES 0</strong></div></div>
+                        <div class="summary-card net" id="month-net-card"><i class="fas fa-balance-scale"></i><div><span>Net Profit</span><strong id="month-net">KES 0</strong></div></div>
                     </div>
-                    <div class="monthly-grid">
-                        <div class="month-card">
-                            <div class="card-header"><h3><i class="fas fa-calendar-check"></i> Monthly Summary</h3></div>
-                            <div class="month-stats">
-                                <div class="m-stat"><div class="m-stat-icon"><i class="fas fa-arrow-up"></i></div><div class="m-stat-info"><span class="m-label">Total Income</span><span class="m-value positive" id="month-income">KES 0.00</span></div></div>
-                                <div class="m-stat"><div class="m-stat-icon"><i class="fas fa-arrow-down"></i></div><div class="m-stat-info"><span class="m-label">Total Expenses</span><span class="m-value negative" id="month-expenses">KES 0.00</span></div></div>
-                                <div class="m-stat highlight"><div class="m-stat-icon"><i class="fas fa-balance-scale"></i></div><div class="m-stat-info"><span class="m-label">Net Profit</span><span class="m-value" id="month-profit">KES 0.00</span></div></div>
-                                <div class="m-stat"><div class="m-stat-icon"><i class="fas fa-shopping-cart"></i></div><div class="m-stat-info"><span class="m-label">Transactions</span><span class="m-value" id="month-transactions">0</span></div></div>
-                            </div>
-                        </div>
-                        <div class="month-card">
-                            <div class="card-header"><h3><i class="fas fa-chart-pie"></i> Revenue Breakdown</h3></div>
-                            <div class="chart-container"><canvas id="monthly-pie-chart"></canvas></div>
-                        </div>
-                        <div class="month-card full-width">
-                            <div class="card-header"><h3><i class="fas fa-table"></i> Daily Breakdown</h3></div>
-                            <div class="transaction-table-container">
-                                <table class="cyber-table" id="monthly-table">
-                                    <thead><tr><th>Date</th><th>Day</th><th>Income</th><th>Expenses</th><th>Net</th><th>Transactions</th></tr></thead>
-                                    <tbody id="monthly-body"></tbody>
-                                </table>
-                            </div>
+                    <div class="monthly-breakdown">
+                        <h3><i class="fas fa-list"></i> Daily Breakdown</h3>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead><tr><th>Date</th><th>Transactions</th><th>Income</th><th>Expenses</th><th>Net</th></tr></thead>
+                                <tbody id="monthly-breakdown"></tbody>
+                            </table>
                         </div>
                     </div>
                 </section>
 
-                <!-- SERVICES -->
+                <!-- Services -->
                 <section id="services" class="section">
-                    <div class="section-header">
-                        <h1 class="glitch-text" data-text="SERVICE MATRIX">SERVICE MATRIX</h1>
-                        <p class="section-desc">All portals. All services. One command center.</p>
-                    </div>
-                    <div class="services-hero">
-                        <div class="services-intro">
-                            <h2>Government & Cyber Services</h2>
-                            <p>We handle all your digital needs — from government portals to everyday cyber services. Fast, reliable, professional.</p>
-                        </div>
-                    </div>
-                    <div class="services-categories">
-                        <div class="service-category">
-                            <div class="cat-header"><div class="cat-icon"><i class="fas fa-landmark"></i></div><h3>Government Portals</h3></div>
-                            <div class="service-list">
-                                <div class="service-item"><div class="svc-icon"><i class="fas fa-id-card"></i></div><div class="svc-info"><h4>E-Citizen</h4><p>National ID, passport applications, good conduct certificates.</p><div class="svc-tags"><span class="tag">ID Application</span><span class="tag">Passport</span><span class="tag">Good Conduct</span></div></div></div>
-                                <div class="service-item"><div class="svc-icon"><i class="fas fa-heartbeat"></i></div><div class="svc-info"><h4>SHA — Social Health Authority</h4><p>Health insurance registration, contributions, and claims.</p><div class="svc-tags"><span class="tag">Registration</span><span class="tag">Contributions</span></div></div></div>
-                                <div class="service-item"><div class="svc-icon"><i class="fas fa-file-invoice-dollar"></i></div><div class="svc-info"><h4>KRA iTax</h4><p>Tax returns filing, PIN registration, tax compliance certificates.</p><div class="svc-tags"><span class="tag">Tax Returns</span><span class="tag">PIN Registration</span><span class="tag">TCC</span></div></div></div>
-                                <div class="service-item"><div class="svc-icon"><i class="fas fa-car"></i></div><div class="svc-info"><h4>NTSA</h4><p>Driving license applications, vehicle registration, transfer.</p><div class="svc-tags"><span class="tag">Driving License</span><span class="tag">Vehicle Reg.</span><span class="tag">Transfer</span></div></div></div>
-                                <div class="service-item"><div class="svc-icon"><i class="fas fa-graduation-cap"></i></div><div class="svc-info"><h4>HELB</h4><p>Higher Education Loans Board applications and repayment.</p><div class="svc-tags"><span class="tag">Loan Application</span><span class="tag">Status Check</span></div></div></div>
-                                <div class="service-item"><div class="svc-icon"><i class="fas fa-building"></i></div><div class="svc-info"><h4>Arhisasa</h4><p>Business registration, company incorporation, name search.</p><div class="svc-tags"><span class="tag">Business Reg.</span><span class="tag">Name Search</span></div></div></div>
-                            </div>
-                        </div>
-                        <div class="service-category">
-                            <div class="cat-header"><div class="cat-icon"><i class="fas fa-desktop"></i></div><h3>Cyber Services</h3></div>
-                            <div class="service-list">
-                                <div class="service-item"><div class="svc-icon"><i class="fas fa-print"></i></div><div class="svc-info"><h4>Printing & Photocopy</h4><p>High-quality color and black & white printing. Bulk available.</p><div class="svc-tags"><span class="tag">Color</span><span class="tag">B&W</span><span class="tag">Bulk</span></div></div></div>
-                                <div class="service-item"><div class="svc-icon"><i class="fas fa-scanner"></i></div><div class="svc-info"><h4>Scanning & Lamination</h4><p>Document scanning to PDF, image scanning, lamination.</p><div class="svc-tags"><span class="tag">PDF Scan</span><span class="tag">Lamination</span></div></div></div>
-                                <div class="service-item"><div class="svc-icon"><i class="fas fa-camera"></i></div><div class="svc-info"><h4>Passport Photos</h4><p>Professional passport and ID photos with instant printing.</p><div class="svc-tags"><span class="tag">Passport Size</span><span class="tag">ID Photos</span></div></div></div>
-                                <div class="service-item"><div class="svc-icon"><i class="fas fa-keyboard"></i></div><div class="svc-info"><h4>Typing & Document Prep</h4><p>Professional typing, CV writing, letter drafting, formatting.</p><div class="svc-tags"><span class="tag">CV Writing</span><span class="tag">Letters</span><span class="tag">Formatting</span></div></div></div>
-                            </div>
-                        </div>
-                    </div>
+                    <h2 class="section-title"><i class="fas fa-briefcase"></i> SERVICE MATRIX</h2>
+                    <div class="services-grid" id="services-grid"></div>
                 </section>
 
-                <!-- ANALYTICS -->
+                <!-- Analytics -->
                 <section id="analytics" class="section">
-                    <div class="section-header">
-                        <h1 class="glitch-text" data-text="NEURAL ANALYTICS">NEURAL ANALYTICS</h1>
-                        <p class="section-desc">Deep insights into your cafe's performance.</p>
-                    </div>
+                    <h2 class="section-title"><i class="fas fa-brain"></i> NEURAL ANALYTICS</h2>
                     <div class="analytics-grid">
-                        <div class="analytics-card"><div class="card-header"><h3><i class="fas fa-chart-bar"></i> Service Performance</h3></div><div class="chart-container"><canvas id="service-bar-chart"></canvas></div></div>
-                        <div class="analytics-card"><div class="card-header"><h3><i class="fas fa-clock"></i> Peak Hours</h3></div><div class="chart-container"><canvas id="peak-hours-chart"></canvas></div></div>
-                        <div class="analytics-card"><div class="card-header"><h3><i class="fas fa-wallet"></i> Payment Methods</h3></div><div class="chart-container"><canvas id="payment-chart"></canvas></div></div>
-                        <div class="analytics-card"><div class="card-header"><h3><i class="fas fa-fire"></i> Expense Categories</h3></div><div class="chart-container"><canvas id="expense-cat-chart"></canvas></div></div>
+                        <div class="analytics-card"><h3>Revenue Trend</h3><canvas id="revenue-chart"></canvas></div>
+                        <div class="analytics-card"><h3>Service Performance</h3><canvas id="service-chart"></canvas></div>
+                        <div class="analytics-card"><h3>Peak Hours</h3><canvas id="hours-chart"></canvas></div>
+                        <div class="analytics-card"><h3>Payment Methods</h3><canvas id="payment-chart"></canvas></div>
                     </div>
                 </section>
             </div>
         </main>
     </div>
 
-    <!-- MODALS -->
-    <div id="modal-overlay" class="modal-overlay">
+    <!-- Transaction Modal -->
+    <div class="modal" id="transaction-modal">
         <div class="modal-content">
-            <div class="modal-header"><h3 id="modal-title">Confirm Action</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-            <div class="modal-body" id="modal-body"></div>
-            <div class="modal-footer"><button class="btn-cyber btn-sm" onclick="closeModal()">Cancel</button><button class="btn-cyber btn-sm danger" id="modal-confirm">Confirm</button></div>
+            <div class="modal-header"><h3><i class="fas fa-plus-circle"></i> New Transaction</h3><button class="modal-close">&times;</button></div>
+            <form id="transaction-form">
+                <div class="form-group"><label>Date</label><input type="date" id="tx-date" required></div>
+                <div class="form-group"><label>Service</label>
+                    <select id="tx-service" required>
+                        <option value="">Select Service...</option>
+                        <option>E-Citizen</option><option>KRA</option><option>SHA</option><option>NTSA</option>
+                        <option>HELB</option><option>Arhisasa</option><option>Computer Rental</option>
+                        <option>Printing</option><option>Scanning</option><option>Typing</option>
+                        <option>Passport Photo</option><option>Lamination</option><option>Other</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Customer Name</label><input type="text" id="tx-customer" placeholder="Customer name" required></div>
+                <div class="form-group"><label>Amount (KES)</label><input type="number" id="tx-amount" min="0" required></div>
+                <div class="form-group"><label>Payment Method</label>
+                    <select id="tx-payment" required>
+                        <option value="Cash">Cash</option>
+                        <option value="M-Pesa">M-Pesa</option>
+                        <option value="Bank">Bank Transfer</option>
+                        <option value="Mixed">Mixed</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Notes (Optional)</label><textarea id="tx-notes" rows="2"></textarea></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary modal-close-btn">Cancel</button>
+                    <button type="submit" class="btn-primary"><i class="fas fa-check"></i> Save Transaction</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- TOAST -->
-    <div id="toast-container"></div>
+    <!-- Change Password Modal -->
+    <div class="modal" id="change-password-modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-key"></i> Change Password</h3><button class="modal-close">&times;</button></div>
+            <form id="change-password-form">
+                <div class="form-group"><label>Current Password</label><input type="password" id="current-pwd" required></div>
+                <div class="form-group"><label>New Password</label><input type="password" id="new-pwd" minlength="6" required></div>
+                <div class="form-group"><label>Confirm New Password</label><input type="password" id="confirm-pwd" required></div>
+                <p class="auth-error" id="pwd-error"></p>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary modal-close-btn">Cancel</button>
+                    <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Update Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Manage Users Modal -->
+    <div class="modal" id="manage-users-modal">
+        <div class="modal-content wide">
+            <div class="modal-header"><h3><i class="fas fa-users-cog"></i> Manage Users</h3><button class="modal-close">&times;</button></div>
+            <div class="users-list" id="users-list"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary modal-close-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
     <script src="app.js"></script>
 </body>
 </html>

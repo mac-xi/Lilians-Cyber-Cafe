@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Avatar bioluminescent glow -->
+    <radialGradient id="bioGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#0066ff" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#001133" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Dune spice gold -->
+    <linearGradient id="spiceGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffd700"/>
+      <stop offset="50%" stop-color="#ffaa00"/>
+      <stop offset="100%" stop-color="#cc6600"/>
+    </linearGradient>
+
+    <!-- Zenitsu lightning -->
+    <linearGradient id="lightningGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffff00"/>
+      <stop offset="50%" stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#ff8c00"/>
+    </linearGradient>
+
+    <!-- Shinobu butterfly purple -->
+    <linearGradient id="butterflyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9333ea"/>
+      <stop offset="50%" stop-color="#c026d3"/>
+      <stop offset="100%" stop-color="#db2777"/>
+    </linearGradient>
+
+    <!-- Glow filters -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="strongGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur1"/>
+      <feGaussianBlur stdDeviation="16" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="#0a0a0f"/>
+
+  <!-- Outer bioluminescent aura (Avatar) -->
+  <circle cx="256" cy="256" r="220" fill="url(#bioGlow)" opacity="0.4"/>
+
+  <!-- Dune spice ring -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="url(#spiceGold)" stroke-width="3" opacity="0.5" filter="url(#glow)"/>
+  <circle cx="256" cy="256" r="190" fill="none" stroke="#ffd700" stroke-width="1" opacity="0.3" stroke-dasharray="10 20"/>
+
+  <!-- === LEFT BUTTERFLY WING (Shinobu) === -->
+  <path d="M256 256 
+           Q180 120 100 180 
+           Q60 220 100 260 
+           Q60 300 100 340 
+           Q180 400 256 256" 
+        fill="url(#butterflyGrad)" opacity="0.75" filter="url(#glow)"/>
+  <!-- Wing vein -->
+  <path d="M256 256 Q180 200 120 220" fill="none" stroke="#00f0ff" stroke-width="2" opacity="0.4"/>
+  <path d="M256 256 Q180 280 120 300" fill="none" stroke="#00f0ff" stroke-width="2" opacity="0.4"/>
+
+  <!-- === RIGHT BUTTERFLY WING (Shinobu) === -->
+  <path d="M256 256 
+           Q332 120 412 180 
+           Q452 220 412 260 
+           Q452 300 412 340 
+           Q332 400 256 256" 
+        fill="url(#butterflyGrad)" opacity="0.75" filter="url(#glow)"/>
+  <!-- Wing vein -->
+  <path d="M256 256 Q332 200 392 220" fill="none" stroke="#00f0ff" stroke-width="2" opacity="0.4"/>
+  <path d="M256 256 Q332 280 392 300" fill="none" stroke="#00f0ff" stroke-width="2" opacity="0.4"/>
+
+  <!-- === LIGHTNING BOLTS (Zenitsu) === -->
+  <!-- Left lightning -->
+  <path d="M80 100 L110 180 L95 180 L140 280 L120 280 L180 380" 
+        fill="none" stroke="url(#lightningGrad)" stroke-width="6" stroke-linejoin="round" 
+        opacity="0.9" filter="url(#glow)"/>
+  <path d="M80 100 L110 180 L95 180 L140 280 L120 280 L180 380" 
+        fill="none" stroke="#ffff00" stroke-width="12" stroke-linejoin="round" 
+        opacity="0.2" filter="url(#strongGlow)"/>
+
+  <!-- Right lightning -->
+  <path d="M432 100 L402 180 L417 180 L372 280 L392 280 L332 380" 
+        fill="none" stroke="url(#lightningGrad)" stroke-width="6" stroke-linejoin="round" 
+        opacity="0.9" filter="url(#glow)"/>
+  <path d="M432 100 L402 180 L417 180 L372 280 L392 280 L332 380" 
+        fill="none" stroke="#ffff00" stroke-width="12" stroke-linejoin="round" 
+        opacity="0.2" filter="url(#strongGlow)"/>
+
+  <!-- === DRAGON-BOAR HEAD === -->
+  <!-- Main head shape -->
+  <path d="M180 160 
+           Q200 120 240 110 
+           Q256 105 272 110 
+           Q312 120 332 160 
+           Q350 200 340 260 
+           Q330 320 290 350 
+           Q256 370 222 350 
+           Q182 320 172 260 
+           Q162 200 180 160" 
+        fill="#12121a" stroke="#00f0ff" stroke-width="4" filter="url(#glow)"/>
+
+  <!-- Inner head highlight -->
+  <path d="M200 170 Q220 140 256 135 Q292 140 312 170 Q320 200 312 240 Q300 280 270 300 Q256 310 242 300 Q212 280 200 240 Q192 200 200 170" 
+        fill="#1a1a24" opacity="0.8"/>
+
+  <!-- Boar tusks (Inosuke) -->
+  <path d="M200 300 Q180 360 210 340" fill="none" stroke="#e8e8e8" stroke-width="6" stroke-linecap="round"/>
+  <path d="M312 300 Q332 360 302 340" fill="none" stroke="#e8e8e8" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Eyes - Glowing cyan bioluminescent (Avatar) -->
+  <ellipse cx="220" cy="220" rx="18" ry="22" fill="#00f0ff" filter="url(#strongGlow)"/>
+  <ellipse cx="292" cy="220" rx="18" ry="22" fill="#00f0ff" filter="url(#strongGlow)"/>
+
+  <!-- Eye pupils (slits - fierce look) -->
+  <ellipse cx="220" cy="220" rx="6" ry="18" fill="#001133"/>
+  <ellipse cx="292" cy="220" rx="6" ry="18" fill="#001133"/>
+
+  <!-- Eye highlights -->
+  <circle cx="226" cy="210" r="5" fill="white" opacity="0.9"/>
+  <circle cx="298" cy="210" r="5" fill="white" opacity="0.9"/>
+
+  <!-- Nose/snout -->
+  <ellipse cx="256" cy="280" rx="20" ry="12" fill="#2a2a3a" stroke="#00f0ff" stroke-width="2" opacity="0.8"/>
+  <circle cx="248" cy="280" r="4" fill="#00f0ff" opacity="0.6"/>
+  <circle cx="264" cy="280" r="4" fill="#00f0ff" opacity="0.6"/>
+
+  <!-- Boar ears (Inosuke) -->
+  <path d="M175 155 Q140 100 160 90 Q180 100 190 140" 
+        fill="#12121a" stroke="#00f0ff" stroke-width="3" filter="url(#glow)"/>
+  <path d="M337 155 Q372 100 352 90 Q332 100 322 140" 
+        fill="#12121a" stroke="#00f0ff" stroke-width="3" filter="url(#glow)"/>
+
+  <!-- Dragon horns (Dune golden spice) -->
+  <path d="M200 140 Q180 80 200 60 Q210 50 220 70" 
+        fill="none" stroke="url(#spiceGold)" stroke-width="5" stroke-linecap="round" filter="url(#glow)"/>
+  <path d="M312 140 Q332 80 312 60 Q302 50 292 70" 
+        fill="none" stroke="url(#spiceGold)" stroke-width="5" stroke-linecap="round" filter="url(#glow)"/>
+
+  <!-- Forehead mark (Inosuke style red) -->
+  <path d="M245 170 L256 150 L267 170" fill="none" stroke="#ff3366" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+
+  <!-- === BIOLUMINESCENT SPOTS (Avatar Pandora) === -->
+  <circle cx="120" cy="200" r="8" fill="#00ff88" opacity="0.8" filter="url(#glow)"/>
+  <circle cx="100" cy="260" r="5" fill="#00f0ff" opacity="0.6"/>
+  <circle cx="130" cy="320" r="6" fill="#00ff88" opacity="0.7"/>
+  <circle cx="392" cy="200" r="8" fill="#00ff88" opacity="0.8" filter="url(#glow)"/>
+  <circle cx="412" cy="260" r="5" fill="#00f0ff" opacity="0.6"/>
+  <circle cx="382" cy="320" r="6" fill="#00ff88" opacity="0.7"/>
+
+  <!-- === SPICE PARTICLES (Dune Arrakis) === -->
+  <circle cx="80" cy="400" r="5" fill="#ffd700" opacity="0.6"/>
+  <circle cx="432" cy="400" r="5" fill="#ffd700" opacity="0.6"/>
+  <circle cx="60" cy="256" r="3" fill="#ff8c00" opacity="0.5"/>
+  <circle cx="452" cy="256" r="3" fill="#ff8c00" opacity="0.5"/>
+  <circle cx="256" cy="60" r="4" fill="#ffd700" opacity="0.7"/>
+  <circle cx="256" cy="452" r="4" fill="#ffd700" opacity="0.7"/>
+  <circle cx="100" cy="100" r="3" fill="#ffaa00" opacity="0.5"/>
+  <circle cx="412" cy="100" r="3" fill="#ffaa00" opacity="0.5"/>
+
+  <!-- Central power core -->
+  <circle cx="256" cy="256" r="30" fill="#00f0ff" opacity="0.1" filter="url(#strongGlow)"/>
+  <circle cx="256" cy="256" r="15" fill="#00f0ff" opacity="0.15"/>
+
+  <!-- Corner accent dots -->
+  <circle cx="70" cy="70" r="6" fill="#00f0ff" opacity="0.5" filter="url(#glow)"/>
+  <circle cx="442" cy="70" r="6" fill="#00f0ff" opacity="0.5" filter="url(#glow)"/>
+  <circle cx="70" cy="442" r="6" fill="#ff00a0" opacity="0.5" filter="url(#glow)"/>
+  <circle cx="442" cy="442" r="6" fill="#ff00a0" opacity="0.5" filter="url(#glow)"/>
+</svg>

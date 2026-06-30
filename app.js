@@ -1,1140 +1,998 @@
-/* ============================================
-   LILIAN'S CYBER CAFÉ — FIREBASE EDITION v2.1
-   Fixed: Notifications, Profile, Search, Payment Totals, Favicon
-   Added: Login Protection for Maxwell & Jane
-   ============================================ */
+// ============================================
+// LILIAN'S CYBER CAFÉ - SHADOW TERMINAL v3.0
+// Firebase Auth + Firestore Edition
+// ============================================
 
-// ===== SECURE LOGIN SYSTEM =====
-// Passwords are SHA-256 hashed for security
-// To change a password: use the "Change Password" button after logging in
-// Or manually update the hash below using: https://www.sha256-online.com
-
-// Current hashed passwords (SHA-256):
-// lilians2026  = 8f7d3a2b1c9e4f5d6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0
-// cybercafe2026 = a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1
-
-const USERS = {
-    'Maxwell': {
-        hash: '01d212f257dfedcb9469474cb1c0786a1640b9af74cbbf07840dc3c85c15c00a',
-        role: 'Admin'
-    },
-    'Jane': {
-        hash: 'eef9ccf69665b3e0058ab3f4fac8f65339281ce6c77e3064839d64a6920c712e',
-        role: 'Manager'
-    }
+// Firebase Config (YOUR KEYS - ALREADY FILLED IN)
+const firebaseConfig = {
+    apiKey: "AIzaSyBs0nVjpwtMjtzbSuGDYG4MoctcVPjiP10",
+    authDomain: "lilian-s-cyber-cafe.firebaseapp.com",
+    projectId: "lilian-s-cyber-cafe",
+    storageBucket: "lilian-s-cyber-cafe.firebasestorage.app",
+    messagingSenderId: "139202749363",
+    appId: "1:139202749363:web:a3614c292bcff6b486a1c6"
 };
 
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Global State
 let currentUser = null;
+let transactions = [];
+let expenses = [];
+let notifications = [];
+let currentMonth = new Date();
+let expenseChart = null;
+let revenueChart = null, serviceChart = null, hoursChart = null, paymentChart = null;
 
-// SHA-256 hash function (built into modern browsers)
-async function sha256(message) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+// ============================================
+// LOADING SCREEN
+// ============================================
+function showLoading() {
+    document.getElementById('loading-screen').style.display = 'flex';
+}
+function hideLoading() {
+    document.getElementById('loading-screen').style.display = 'none';
 }
 
-async function attemptLogin() {
-    const username = document.getElementById('login-username').value.trim();
+// ============================================
+// TOAST NOTIFICATIONS
+// ============================================
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle';
+    toast.innerHTML = `<i class="fas fa-${icon}"></i><span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => { toast.remove(); }, 4000);
+}
+
+// ============================================
+// AUTH SYSTEM
+// ============================================
+const authScreen = document.getElementById('auth-screen');
+const appContainer = document.getElementById('app-container');
+
+// Tab switching
+document.querySelectorAll('.auth-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(`${tab.dataset.tab}-form`).classList.add('active');
+        // Hide forgot form if switching
+        document.getElementById('forgot-form').classList.remove('active');
+    });
+});
+
+// Toggle password visibility
+document.querySelectorAll('.toggle-password').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const input = btn.parentElement.querySelector('input');
+        input.type = input.type === 'password' ? 'text' : 'password';
+        btn.querySelector('i').className = input.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+    });
+});
+
+// Login
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
-    const errorDiv = document.getElementById('login-error');
-    const container = document.querySelector('.login-container');
+    const errorEl = document.getElementById('login-error');
 
-    if (!username || !password) {
-        errorDiv.textContent = 'Enter both username and password.';
-        errorDiv.style.color = 'var(--neon-red)';
-        container.classList.remove('shake');
-        void container.offsetWidth;
-        container.classList.add('shake');
-        return;
-    }
-
-    if (!USERS[username]) {
-        errorDiv.textContent = 'ACCESS DENIED. User not found.';
-        errorDiv.style.color = 'var(--neon-red)';
-        container.classList.remove('shake');
-        void container.offsetWidth;
-        container.classList.add('shake');
-        document.getElementById('login-password').value = '';
-        return;
-    }
-
-    // Hash the entered password and compare
-    const enteredHash = await sha256(password);
-
-    if (enteredHash === USERS[username].hash) {
-        currentUser = username;
-        errorDiv.textContent = '';
-        errorDiv.style.color = 'var(--neon-green)';
-        errorDiv.textContent = 'Access granted. Welcome, ' + username + '.';
-
-        setTimeout(function() {
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('loading-screen').classList.remove('hidden');
-            initApp();
-        }, 800);
-    } else {
-        errorDiv.textContent = 'ACCESS DENIED. Invalid password.';
-        errorDiv.style.color = 'var(--neon-red)';
-        container.classList.remove('shake');
-        void container.offsetWidth;
-        container.classList.add('shake');
-        document.getElementById('login-password').value = '';
-    }
-}
-
-// Change password function (called from profile menu)
-async function changePassword() {
-    const oldPass = prompt('Enter your CURRENT password:');
-    if (!oldPass) return;
-
-    const oldHash = await sha256(oldPass);
-    if (oldHash !== USERS[currentUser].hash) {
-        showToast('Incorrect current password!', 'error');
-        return;
-    }
-
-    const newPass = prompt('Enter your NEW password (min 6 characters):');
-    if (!newPass || newPass.length < 6) {
-        showToast('Password must be at least 6 characters!', 'error');
-        return;
-    }
-
-    const confirmPass = prompt('Confirm your NEW password:');
-    if (newPass !== confirmPass) {
-        showToast('Passwords do not match!', 'error');
-        return;
-    }
-
-    const newHash = await sha256(newPass);
-    USERS[currentUser].hash = newHash;
-
-    // Show the new hash so they can update the file
-    showToast('Password changed successfully!', 'success');
-
-    // Create a modal showing the new hash
-    setTimeout(function() {
-        showModal(
-            'Password Updated',
-            '<p><strong>Your password has been changed!</strong></p>' +
-            '<p style="margin-top:10px;color:var(--neon-cyan);">New hash for ' + currentUser + ':</p>' +
-            '<code style="display:block;background:var(--void-lighter);padding:10px;border-radius:8px;margin-top:8px;font-size:0.75rem;word-break:break-all;">' + newHash + '</code>' +
-            '<p style="margin-top:15px;color:var(--text-secondary);font-size:0.8rem;">Copy this hash and replace the old one in your app.js file to make it permanent.</p>',
-            null
-        );
-        document.getElementById('modal-confirm').style.display = 'none';
-    }, 500);
-}
-
-// Allow Enter key to login
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && document.getElementById('login-screen') && !document.getElementById('login-screen').classList.contains('hidden')) {
-        if (document.activeElement.id === 'login-username' || document.activeElement.id === 'login-password') {
-            attemptLogin();
-        }
+    try {
+        showLoading();
+        await auth.signInWithEmailAndPassword(email, password);
+        errorEl.textContent = '';
+    } catch (err) {
+        hideLoading();
+        errorEl.textContent = getAuthError(err.code);
     }
 });
 
-// ===== FIREBASE DB =====
-const DB = {
-    transactionsRef: db.collection('transactions'),
-    expensesRef: db.collection('expenses'),
-    transactions: [],
-    expenses: [],
+// Register
+document.getElementById('register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('register-name').value;
+    const email = document.getElementById('register-email').value;
+    const password = document.getElementById('register-password').value;
+    const confirm = document.getElementById('register-confirm').value;
+    const errorEl = document.getElementById('register-error');
 
-    async load() {
-        try {
-            const txSnapshot = await this.transactionsRef.orderBy('createdAt', 'desc').get();
-            this.transactions = txSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            const exSnapshot = await this.expensesRef.orderBy('createdAt', 'desc').get();
-            this.expenses = exSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            console.log('Firebase loaded:', this.transactions.length, 'transactions,', this.expenses.length, 'expenses');
-        } catch (err) {
-            console.error('Firebase load error:', err);
-            showToast('Error loading data from cloud', 'error');
-        }
-    },
-
-    async addTransaction(t) {
-        try {
-            t.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-            const docRef = await this.transactionsRef.add(t);
-            t.id = docRef.id;
-            this.transactions.unshift(t);
-            return t;
-        } catch (err) {
-            console.error('Firebase add error:', err);
-            showToast('Failed to save transaction', 'error');
-            throw err;
-        }
-    },
-
-    async addExpense(e) {
-        try {
-            e.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-            const docRef = await this.expensesRef.add(e);
-            e.id = docRef.id;
-            this.expenses.unshift(e);
-            return e;
-        } catch (err) {
-            console.error('Firebase add error:', err);
-            showToast('Failed to save expense', 'error');
-            throw err;
-        }
-    },
-
-    async deleteTransaction(id) {
-        try {
-            await this.transactionsRef.doc(id).delete();
-            this.transactions = this.transactions.filter(t => t.id !== id);
-        } catch (err) {
-            console.error('Firebase delete error:', err);
-            showToast('Failed to delete', 'error');
-            throw err;
-        }
-    },
-
-    async deleteExpense(id) {
-        try {
-            await this.expensesRef.doc(id).delete();
-            this.expenses = this.expenses.filter(e => e.id !== id);
-        } catch (err) {
-            console.error('Firebase delete error:', err);
-            showToast('Failed to delete', 'error');
-            throw err;
-        }
-    },
-
-    getTransactionsByDate(dateStr) {
-        return this.transactions.filter(t => t.date === dateStr);
-    },
-
-    getTransactionsByMonth(year, month) {
-        return this.transactions.filter(t => {
-            const d = new Date(t.date);
-            return d.getFullYear() === year && d.getMonth() === month;
-        });
-    },
-
-    getExpensesByMonth(year, month) {
-        return this.expenses.filter(e => {
-            const d = new Date(e.date);
-            return d.getFullYear() === year && d.getMonth() === month;
-        });
+    if (password !== confirm) {
+        errorEl.textContent = 'Passwords do not match!';
+        return;
     }
-};
-
-// ===== DEMO DATA =====
-async function seedDemoData() {
-    if (DB.transactions.length > 0 || DB.expenses.length > 0) return;
-
-    const services = ['E-Citizen', 'KRA', 'SHA', 'NTSA', 'Cyber Services', 'Photocopy', 'Printing', 'HELB', 'Arhisasa'];
-    const customers = ['John Mwangi', 'Alice Wanjiku', 'Peter Ochieng', 'Grace Akinyi', 'James Kimani', 'Mary Njeri', 'David Otieno', 'Sarah Muthoni'];
-    const categories = ['Rent', 'Electricity', 'Internet', 'Stationery', 'Printer Ink', 'Computer Maintenance', 'Transport', 'Food'];
-    const payments = ['Cash', 'M-Pesa', 'Bank Transfer'];
-
-    const today = new Date();
-
-    for (let i = 0; i < 35; i++) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - Math.floor(Math.random() * 25));
-        const dateStr = date.toISOString().split('T')[0];
-        const payment = payments[Math.floor(Math.random() * payments.length)];
-
-        await DB.transactionsRef.add({
-            date: dateStr,
-            time: String(Math.floor(Math.random() * 12) + 8).padStart(2,'0') + ':' + String(Math.floor(Math.random() * 60)).padStart(2,'0'),
-            service: services[Math.floor(Math.random() * services.length)],
-            customer: customers[Math.floor(Math.random() * customers.length)],
-            amount: Math.floor(Math.random() * 2500) + 50,
-            payment: payment,
-            notes: '',
-            createdAt: firebase.firestore.Timestamp.fromDate(date)
-        });
+    if (password.length < 6) {
+        errorEl.textContent = 'Password must be at least 6 characters!';
+        return;
     }
 
-    for (let i = 0; i < 15; i++) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - Math.floor(Math.random() * 25));
-
-        await DB.expensesRef.add({
-            date: date.toISOString().split('T')[0],
-            category: categories[Math.floor(Math.random() * categories.length)],
-            description: 'Monthly expense payment',
-            amount: Math.floor(Math.random() * 15000) + 500,
-            payment: ['Cash', 'M-Pesa', 'Bank'][Math.floor(Math.random() * 3)],
-            reference: 'REF-' + Math.floor(Math.random() * 99999),
-            createdAt: firebase.firestore.Timestamp.fromDate(date)
+    try {
+        showLoading();
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        await cred.user.updateProfile({ displayName: name });
+        // Save user to Firestore
+        await db.collection('users').doc(cred.user.uid).set({
+            name: name,
+            email: email,
+            role: 'Manager',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        errorEl.textContent = '';
+        showToast('Account created! Welcome to the Shadow Terminal.', 'success');
+    } catch (err) {
+        hideLoading();
+        errorEl.textContent = getAuthError(err.code);
     }
+});
 
-    await DB.load();
-    showToast('Demo data loaded to Firebase!', 'success');
-}
+// Forgot Password
+document.getElementById('forgot-password-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+    document.getElementById('forgot-form').classList.add('active');
+});
 
-// ===== PARTICLES =====
-function initParticles() {
-    const canvas = document.getElementById('particle-canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+document.getElementById('back-to-login').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+    document.getElementById('login-form').classList.add('active');
+});
 
-    const particles = [];
-    for (let i = 0; i < 60; i++) {
-        particles.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 2 + 0.5,
-            speedX: (Math.random() - 0.5) * 0.5,
-            speedY: (Math.random() - 0.5) * 0.5,
-            opacity: Math.random() * 0.5 + 0.1,
-            color: Math.random() > 0.5 ? '0, 240, 255' : '255, 0, 160'
-        });
+document.getElementById('forgot-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('forgot-email').value;
+    const errorEl = document.getElementById('forgot-error');
+    const successEl = document.getElementById('forgot-success');
+
+    try {
+        await auth.sendPasswordResetEmail(email);
+        successEl.textContent = 'Password reset link sent! Check your email.';
+        errorEl.textContent = '';
+    } catch (err) {
+        errorEl.textContent = getAuthError(err.code);
+        successEl.textContent = '';
     }
+});
 
-    function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particles.forEach(p => {
-            p.x += p.speedX;
-            p.y += p.speedY;
-            if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
-                p.x = Math.random() * canvas.width;
-                p.y = Math.random() * canvas.height;
-            }
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(' + p.color + ', ' + p.opacity + ')';
-            ctx.fill();
-        });
-
-        particles.forEach((p1, i) => {
-            particles.slice(i + 1).forEach(p2 => {
-                const dx = p1.x - p2.x, dy = p1.y - p2.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 150) {
-                    ctx.beginPath();
-                    ctx.moveTo(p1.x, p1.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    ctx.strokeStyle = 'rgba(0, 240, 255, ' + (0.1 * (1 - dist / 150)) + ')';
-                    ctx.lineWidth = 0.5;
-                    ctx.stroke();
-                }
-            });
-        });
-        requestAnimationFrame(animate);
-    }
-    animate();
-    window.addEventListener('resize', () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    });
-}
-
-// ===== CLOCK =====
-function updateClock() {
-    const now = new Date();
-    document.getElementById('clock').textContent = now.toLocaleTimeString('en-GB');
-    document.getElementById('date').textContent = now.toLocaleDateString('en-GB', {
-        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
-    });
-}
-
-// ===== NAVIGATION =====
-function navigateTo(sectionId) {
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-
-    const target = document.getElementById(sectionId);
-    if (target) target.classList.add('active');
-
-    const navBtn = document.querySelector('[data-section="' + sectionId + '"]');
-    if (navBtn) navBtn.classList.add('active');
-
-    const pageNames = {
-        'dashboard': 'Dashboard', 'daily-cash': 'Daily Cash Log',
-        'expenditures': 'Expenditure Tracker', 'monthly': 'Monthly Archives',
-        'services': 'Service Matrix', 'analytics': 'Neural Analytics'
+function getAuthError(code) {
+    const errors = {
+        'auth/invalid-email': 'Invalid email address.',
+        'auth/user-disabled': 'This account has been disabled.',
+        'auth/user-not-found': 'No account found with this email.',
+        'auth/wrong-password': 'Incorrect password.',
+        'auth/email-already-in-use': 'An account already exists with this email.',
+        'auth/weak-password': 'Password is too weak. Use at least 6 characters.',
+        'auth/invalid-credential': 'Invalid email or password.',
+        'auth/too-many-requests': 'Too many attempts. Please try again later.',
+        'auth/network-request-failed': 'Network error. Check your connection.'
     };
-    document.querySelector('.current-page').textContent = pageNames[sectionId] || 'Dashboard';
-
-    // Close any open dropdowns
-    closeAllDropdowns();
-
-    if (sectionId === 'dashboard') refreshDashboard();
-    if (sectionId === 'daily-cash') refreshDailyCash();
-    if (sectionId === 'expenditures') refreshExpenditures();
-    if (sectionId === 'monthly') refreshMonthly();
-    if (sectionId === 'analytics') refreshAnalytics();
+    return errors[code] || 'An error occurred. Please try again.';
 }
 
-// ===== DROPDOWN MANAGEMENT =====
-function closeAllDropdowns() {
-    document.querySelectorAll('.notification-dropdown, .profile-dropdown, .search-dropdown').forEach(d => {
-        d.classList.remove('active');
+// Auth State Listener
+auth.onAuthStateChanged(async (user) => {
+    if (user) {
+        currentUser = user;
+        authScreen.style.display = 'none';
+        appContainer.style.display = 'block';
+
+        // Update UI with user info
+        document.getElementById('profile-name').textContent = user.displayName || user.email.split('@')[0];
+        document.getElementById('dropdown-name').textContent = user.displayName || user.email.split('@')[0];
+        document.getElementById('dropdown-email').textContent = user.email;
+        document.getElementById('profile-img').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`;
+        document.querySelector('.profile-header img').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`;
+
+        // Load data
+        await loadAllData();
+        initApp();
+        hideLoading();
+        showToast(`Welcome back, ${user.displayName || 'Agent'}!`, 'success');
+    } else {
+        currentUser = null;
+        authScreen.style.display = 'flex';
+        appContainer.style.display = 'none';
+        hideLoading();
+    }
+});
+
+// Logout
+document.getElementById('logout-btn').addEventListener('click', async () => {
+    try {
+        await auth.signOut();
+        showToast('Logged out successfully.', 'info');
+    } catch (err) {
+        showToast('Logout failed: ' + err.message, 'error');
+    }
+});
+
+// ============================================
+// DATA OPERATIONS
+// ============================================
+async function loadAllData() {
+    try {
+        // Load transactions
+        const txSnap = await db.collection('transactions').orderBy('createdAt', 'desc').get();
+        transactions = txSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Load expenses
+        const exSnap = await db.collection('expenses').orderBy('createdAt', 'desc').get();
+        expenses = exSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Load notifications
+        const notifSnap = await db.collection('notifications').orderBy('createdAt', 'desc').limit(20).get();
+        notifications = notifSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+        console.error('Error loading data:', err);
+        showToast('Error loading data. Please refresh.', 'error');
+    }
+}
+
+async function addTransaction(tx) {
+    tx.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    tx.createdBy = currentUser.uid;
+    const docRef = await db.collection('transactions').add(tx);
+    tx.id = docRef.id;
+    transactions.unshift(tx);
+    await addNotification('New transaction logged', `${tx.service} - KES ${tx.amount} (${tx.payment})`, 'transaction');
+    return tx;
+}
+
+async function addExpense(ex) {
+    ex.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    ex.createdBy = currentUser.uid;
+    const docRef = await db.collection('expenses').add(ex);
+    ex.id = docRef.id;
+    expenses.unshift(ex);
+    await addNotification('Expense recorded', `${ex.category} - KES ${ex.amount}`, 'expense');
+    return ex;
+}
+
+async function deleteTransaction(id) {
+    await db.collection('transactions').doc(id).delete();
+    transactions = transactions.filter(t => t.id !== id);
+}
+
+async function deleteExpense(id) {
+    await db.collection('expenses').doc(id).delete();
+    expenses = expenses.filter(e => e.id !== id);
+}
+
+async function addNotification(title, message, type) {
+    const notif = {
+        title, message, type,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        read: false
+    };
+    await db.collection('notifications').add(notif);
+    notifications.unshift({ ...notif, id: Date.now().toString() });
+    updateNotificationBadge();
+}
+
+// ============================================
+// APP INITIALIZATION
+// ============================================
+function initApp() {
+    // Set default date
+    document.getElementById('daily-date').value = formatDate(new Date());
+    document.getElementById('tx-date').value = formatDate(new Date());
+    document.getElementById('expense-date').value = formatDate(new Date());
+
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            item.classList.add('active');
+            document.getElementById(item.dataset.section).classList.add('active');
+
+            if (item.dataset.section === 'analytics') setTimeout(renderAnalytics, 100);
+            if (item.dataset.section === 'expenditures') setTimeout(renderExpenses, 100);
+            if (item.dataset.section === 'monthly') setTimeout(renderMonthly, 100);
+        });
     });
-}
 
-function toggleDropdown(id) {
-    const dropdown = document.getElementById(id);
-    const isActive = dropdown.classList.contains('active');
-    closeAllDropdowns();
-    if (!isActive) dropdown.classList.add('active');
-}
+    // Dashboard
+    renderDashboard();
 
-function clearNotifications() {
-    document.getElementById('notif-list').innerHTML = '<div style="padding:20px;text-align:center;color:#4a4a6a;"><i class="fas fa-check-circle" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>All caught up!</div>';
-    document.getElementById('notif-badge').style.display = 'none';
-    showToast('Notifications cleared', 'success');
-}
+    // Daily Cash
+    document.getElementById('daily-date').addEventListener('change', renderDailyCash);
+    document.getElementById('add-transaction-btn').addEventListener('click', () => {
+        document.getElementById('transaction-modal').classList.add('active');
+    });
 
-// ===== SEARCH =====
-function initSearch() {
-    const searchInput = document.getElementById('global-search');
-    const dropdown = document.getElementById('search-dropdown');
+    // Transaction Form
+    document.getElementById('transaction-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tx = {
+            date: document.getElementById('tx-date').value,
+            service: document.getElementById('tx-service').value,
+            customer: document.getElementById('tx-customer').value,
+            amount: parseFloat(document.getElementById('tx-amount').value),
+            payment: document.getElementById('tx-payment').value,
+            notes: document.getElementById('tx-notes').value
+        };
+        showLoading();
+        await addTransaction(tx);
+        hideLoading();
+        document.getElementById('transaction-modal').classList.remove('active');
+        document.getElementById('transaction-form').reset();
+        document.getElementById('tx-date').value = formatDate(new Date());
+        renderDailyCash();
+        renderDashboard();
+        showToast('Transaction saved!', 'success');
+    });
 
-    searchInput.addEventListener('input', function() {
-        const query = this.value.toLowerCase().trim();
-        if (query.length < 1) {
-            dropdown.classList.remove('active');
+    // Expense Form
+    document.getElementById('expense-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const ex = {
+            date: document.getElementById('expense-date').value,
+            category: document.getElementById('expense-category').value,
+            description: document.getElementById('expense-desc').value,
+            amount: parseFloat(document.getElementById('expense-amount').value)
+        };
+        showLoading();
+        await addExpense(ex);
+        hideLoading();
+        document.getElementById('expense-form').reset();
+        document.getElementById('expense-date').value = formatDate(new Date());
+        renderExpenses();
+        renderDashboard();
+        showToast('Expense recorded!', 'success');
+    });
+
+    // Monthly navigation
+    document.getElementById('prev-month').addEventListener('click', () => {
+        currentMonth.setMonth(currentMonth.getMonth() - 1);
+        renderMonthly();
+    });
+    document.getElementById('next-month').addEventListener('click', () => {
+        currentMonth.setMonth(currentMonth.getMonth() + 1);
+        renderMonthly();
+    });
+    document.getElementById('export-monthly').addEventListener('click', exportMonthlyCSV);
+
+    // Search
+    document.getElementById('global-search').addEventListener('input', handleSearch);
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-container')) {
+            document.getElementById('search-results').classList.remove('active');
+        }
+    });
+
+    // Notifications
+    document.getElementById('notification-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('notification-dropdown').classList.toggle('active');
+        document.getElementById('profile-dropdown').classList.remove('active');
+    });
+    document.getElementById('clear-notifications').addEventListener('click', async () => {
+        notifications = [];
+        // Delete all notifications from Firestore
+        const batch = db.batch();
+        const notifSnap = await db.collection('notifications').get();
+        notifSnap.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        updateNotificationBadge();
+        renderNotifications();
+    });
+
+    // Profile dropdown
+    document.getElementById('profile-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('profile-dropdown').classList.toggle('active');
+        document.getElementById('notification-dropdown').classList.remove('active');
+    });
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', () => {
+        document.getElementById('notification-dropdown').classList.remove('active');
+        document.getElementById('profile-dropdown').classList.remove('active');
+    });
+
+    // Change Password Modal
+    document.getElementById('change-password-btn').addEventListener('click', () => {
+        document.getElementById('change-password-modal').classList.add('active');
+        document.getElementById('profile-dropdown').classList.remove('active');
+    });
+    document.getElementById('change-password-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const currentPwd = document.getElementById('current-pwd').value;
+        const newPwd = document.getElementById('new-pwd').value;
+        const confirmPwd = document.getElementById('confirm-pwd').value;
+        const errorEl = document.getElementById('pwd-error');
+
+        if (newPwd !== confirmPwd) {
+            errorEl.textContent = 'New passwords do not match!';
+            return;
+        }
+        if (newPwd.length < 6) {
+            errorEl.textContent = 'Password must be at least 6 characters!';
             return;
         }
 
-        const results = [];
-
-        // Search transactions
-        DB.transactions.forEach(t => {
-            if ((t.customer && t.customer.toLowerCase().includes(query)) ||
-                t.service.toLowerCase().includes(query) ||
-                t.amount.toString().includes(query) ||
-                t.date.includes(query)) {
-                results.push({ type: 'transaction', data: t });
-            }
-        });
-
-        // Search expenses
-        DB.expenses.forEach(e => {
-            if (e.category.toLowerCase().includes(query) ||
-                e.description.toLowerCase().includes(query) ||
-                e.amount.toString().includes(query)) {
-                results.push({ type: 'expense', data: e });
-            }
-        });
-
-        // Search services
-        const services = ['E-Citizen', 'KRA', 'SHA', 'NTSA', 'HELB', 'Arhisasa', 'Cyber Services', 'Photocopy', 'Printing'];
-        services.forEach(s => {
-            if (s.toLowerCase().includes(query)) {
-                results.push({ type: 'service', data: { name: s } });
-            }
-        });
-
-        if (results.length === 0) {
-            dropdown.innerHTML = '<div class="search-no-results"><i class="fas fa-search" style="display:block;margin-bottom:8px;font-size:1.2rem;"></i>No results found for "' + query + '"</div>';
-        } else {
-            dropdown.innerHTML = results.slice(0, 8).map(r => {
-                if (r.type === 'transaction') {
-                    return '<div class="search-result-item" onclick="navigateTo(\'daily-cash\');document.getElementById(\'filter-date\').value=\'' + r.data.date + '\';refreshDailyCash();closeAllDropdowns();document.getElementById(\'global-search\').value=\'\';">' +
-                        '<div class="search-result-icon"><i class="fas fa-coins"></i></div>' +
-                        '<div class="search-result-info"><h5>' + r.data.service + '</h5><span>' + (r.data.customer || 'Walk-in') + ' • ' + r.data.date + '</span></div>' +
-                        '<div class="search-result-amount">+' + formatKES(r.data.amount) + '</div></div>';
-                } else if (r.type === 'expense') {
-                    return '<div class="search-result-item" onclick="navigateTo(\'expenditures\');closeAllDropdowns();document.getElementById(\'global-search\').value=\'\';">' +
-                        '<div class="search-result-icon" style="background:rgba(255,51,102,0.15);color:#ff3366;"><i class="fas fa-fire"></i></div>' +
-                        '<div class="search-result-info"><h5>' + r.data.category + '</h5><span>' + r.data.description + ' • ' + r.data.date + '</span></div>' +
-                        '<div class="search-result-amount" style="color:#ff3366;">-' + formatKES(r.data.amount) + '</div></div>';
-                } else {
-                    return '<div class="search-result-item" onclick="navigateTo(\'services\');closeAllDropdowns();document.getElementById(\'global-search\').value=\'\';">' +
-                        '<div class="search-result-icon"><i class="fas fa-briefcase"></i></div>' +
-                        '<div class="search-result-info"><h5>' + r.data.name + '</h5><span>Service</span></div></div>';
-                }
-            }).join('');
-        }
-
-        dropdown.classList.add('active');
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.search-box')) {
-            dropdown.classList.remove('active');
+        try {
+            const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, currentPwd);
+            await currentUser.reauthenticateWithCredential(credential);
+            await currentUser.updatePassword(newPwd);
+            errorEl.textContent = '';
+            document.getElementById('change-password-modal').classList.remove('active');
+            document.getElementById('change-password-form').reset();
+            showToast('Password updated successfully!', 'success');
+        } catch (err) {
+            errorEl.textContent = err.code === 'auth/wrong-password' ? 'Current password is incorrect.' : 'Error: ' + err.message;
         }
     });
+
+    // Manage Users
+    document.getElementById('manage-users-btn').addEventListener('click', async () => {
+        document.getElementById('manage-users-modal').classList.add('active');
+        document.getElementById('profile-dropdown').classList.remove('active');
+        await renderUsersList();
+    });
+
+    // Business Settings
+    document.getElementById('business-settings-btn').addEventListener('click', () => {
+        showToast('Business settings coming in next update!', 'info');
+        document.getElementById('profile-dropdown').classList.remove('active');
+    });
+
+    // Backup
+    document.getElementById('backup-btn').addEventListener('click', () => {
+        exportAllData();
+        document.getElementById('profile-dropdown').classList.remove('active');
+    });
+
+    // Modal close buttons
+    document.querySelectorAll('.modal-close, .modal-close-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            btn.closest('.modal').classList.remove('active');
+        });
+    });
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.classList.remove('active');
+        });
+    });
+
+    // Initial renders
+    renderDailyCash();
+    renderNotifications();
+    renderServices();
+    updateNotificationBadge();
 }
 
-// ===== TOAST =====
-function showToast(message, type) {
-    type = type || 'info';
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = 'toast ' + type;
-    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
-    toast.innerHTML = '<i class="fas ' + icons[type] + '"></i><span class="toast-message">' + message + '</span>';
-    container.appendChild(toast);
-    setTimeout(() => toast.remove(), 3500);
-}
+// ============================================
+// RENDER FUNCTIONS
+// ============================================
+function renderDashboard() {
+    const cashTotal = transactions.filter(t => t.payment === 'Cash').reduce((s, t) => s + (t.amount || 0), 0);
+    const mpesaTotal = transactions.filter(t => t.payment === 'M-Pesa').reduce((s, t) => s + (t.amount || 0), 0);
+    const bankTotal = transactions.filter(t => t.payment === 'Bank').reduce((s, t) => s + (t.amount || 0), 0);
+    const grandTotal = cashTotal + mpesaTotal + bankTotal;
 
-// ===== MODAL =====
-let modalCallback = null;
+    document.getElementById('total-cash').textContent = `KES ${formatNumber(cashTotal)}`;
+    document.getElementById('total-mpesa').textContent = `KES ${formatNumber(mpesaTotal)}`;
+    document.getElementById('total-bank').textContent = `KES ${formatNumber(bankTotal)}`;
+    document.getElementById('total-grand').textContent = `KES ${formatNumber(grandTotal)}`;
 
-function showModal(title, body, confirmCallback) {
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-body').innerHTML = body;
-    document.getElementById('modal-overlay').classList.add('active');
-    modalCallback = confirmCallback;
-}
-
-function closeModal() {
-    document.getElementById('modal-overlay').classList.remove('active');
-    modalCallback = null;
-}
-
-// ===== DASHBOARD =====
-let revenueChart = null;
-
-function refreshDashboard() {
-    const today = new Date().toISOString().split('T')[0];
-    const todayTx = DB.getTransactionsByDate(today);
-    const todayRevenue = todayTx.reduce(function(sum, t) { return sum + t.amount; }, 0);
-
-    document.getElementById('today-revenue').textContent = formatKES(todayRevenue);
-    document.getElementById('today-transactions').textContent = todayTx.length;
-
-    const now = new Date();
-    const monthTx = DB.getTransactionsByMonth(now.getFullYear(), now.getMonth());
-    const monthRevenue = monthTx.reduce(function(sum, t) { return sum + t.amount; }, 0);
-    document.getElementById('monthly-revenue').textContent = formatKES(monthRevenue);
-    document.getElementById('month-name').textContent = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-
-    const monthExp = DB.getExpensesByMonth(now.getFullYear(), now.getMonth());
-    const totalExp = monthExp.reduce(function(sum, e) { return sum + e.amount; }, 0);
-    document.getElementById('total-expenditures').textContent = formatKES(totalExp);
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yestStr = yesterday.toISOString().split('T')[0];
-    const yestRevenue = DB.getTransactionsByDate(yestStr).reduce(function(sum, t) { return sum + t.amount; }, 0);
-    const change = yestRevenue > 0 ? ((todayRevenue - yestRevenue) / yestRevenue * 100).toFixed(1) : 0;
-    document.getElementById('revenue-change').textContent = (change >= 0 ? '+' : '') + change + '%';
-
-    // ===== PAYMENT METHOD TOTALS =====
-    const cashTotal = DB.transactions.filter(t => t.payment === 'Cash').reduce((s, t) => s + t.amount, 0);
-    const mpesaTotal = DB.transactions.filter(t => t.payment === 'M-Pesa').reduce((s, t) => s + t.amount, 0);
-    const bankTotal = DB.transactions.filter(t => t.payment === 'Bank Transfer').reduce((s, t) => s + t.amount, 0);
-    const grandTotal = DB.transactions.reduce((s, t) => s + t.amount, 0);
-
-    document.getElementById('cash-total').textContent = formatKES(cashTotal);
-    document.getElementById('mpesa-total').textContent = formatKES(mpesaTotal);
-    document.getElementById('bank-total').textContent = formatKES(bankTotal);
-    document.getElementById('grand-total').textContent = formatKES(grandTotal);
-
-    // Recent transactions
-    const recentList = document.getElementById('recent-transactions');
-    const recent = DB.transactions.slice().sort(function(a, b) {
-        return new Date(b.createdAt?.seconds ? b.createdAt.seconds * 1000 : b.createdAt) - 
-               new Date(a.createdAt?.seconds ? a.createdAt.seconds * 1000 : a.createdAt);
-    }).slice(0, 8);
-
-    if (recent.length === 0) {
-        recentList.innerHTML = '<div class="empty-state"><i class="fas fa-ghost"></i><p>No transactions yet. Start logging!</p></div>';
+    // Today's activity
+    const today = formatDate(new Date());
+    const todayTx = transactions.filter(t => t.date === today).slice(0, 5);
+    const activityList = document.getElementById('today-activity');
+    if (todayTx.length === 0) {
+        activityList.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No transactions today yet.</p></div>';
     } else {
-        recentList.innerHTML = recent.map(function(t) {
-            return '<div class="recent-item"><div class="recent-icon income"><i class="fas fa-arrow-up"></i></div><div class="recent-info"><div class="recent-title">' + t.service + '</div><div class="recent-meta">' + (t.customer || 'Walk-in') + ' &bull; ' + t.date + '</div></div><div class="recent-amount positive">+' + formatKES(t.amount) + '</div></div>';
-        }).join('');
+        activityList.innerHTML = todayTx.map(t => `
+            <div class="activity-item">
+                <div class="activity-info">
+                    <span class="activity-title">${t.service} - ${t.customer}</span>
+                    <span class="activity-meta">${t.payment} • ${formatTime(t.createdAt)}</span>
+                </div>
+                <span class="activity-amount">+KES ${formatNumber(t.amount)}</span>
+            </div>
+        `).join('');
     }
 
     // Top services
     const serviceCounts = {};
-    DB.transactions.forEach(function(t) { serviceCounts[t.service] = (serviceCounts[t.service] || 0) + 1; });
-    const topServices = Object.entries(serviceCounts).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 6);
+    transactions.forEach(t => { serviceCounts[t.service] = (serviceCounts[t.service] || 0) + 1; });
+    const topServices = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const maxCount = topServices.length > 0 ? topServices[0][1] : 1;
 
-    const serviceIcons = {
-        'E-Citizen': 'fa-id-card', 'KRA': 'fa-file-invoice-dollar', 'SHA': 'fa-heartbeat',
-        'NTSA': 'fa-car', 'HELB': 'fa-graduation-cap', 'Arhisasa': 'fa-building',
-        'Cyber Services': 'fa-desktop', 'Photocopy': 'fa-copy', 'Printing': 'fa-print',
-        'Scanning': 'fa-scanner', 'Lamination': 'fa-layer-group', 'Passport Photos': 'fa-camera',
-        'Other': 'fa-ellipsis-h'
-    };
-
-    document.getElementById('top-services').innerHTML = topServices.map(function(item) {
-        return '<div class="service-preview-item"><i class="fas ' + (serviceIcons[item[0]] || 'fa-circle') + '"></i><h4>' + item[0] + '</h4><span>' + item[1] + ' transactions</span></div>';
-    }).join('');
-
-    renderRevenueChart();
+    document.getElementById('top-services').innerHTML = topServices.map(([name, count]) => `
+        <div class="top-service-item">
+            <span class="top-service-label">${name}</span>
+            <div class="top-service-bar">
+                <div class="top-service-fill" style="width: ${(count / maxCount) * 100}%"></div>
+            </div>
+            <span class="top-service-count">${count}</span>
+        </div>
+    `).join('') || '<div class="empty-state"><i class="fas fa-chart-bar"></i><p>No data yet.</p></div>';
 }
 
-function renderRevenueChart() {
-    const ctx = document.getElementById('revenue-chart');
-    if (!ctx) return;
+function renderDailyCash() {
+    const dateStr = document.getElementById('daily-date').value;
+    const dayTx = transactions.filter(t => t.date === dateStr);
 
-    const days = [], revenues = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        days.push(d.toLocaleDateString('en-GB', { weekday: 'short' }));
-        revenues.push(DB.getTransactionsByDate(dateStr).reduce(function(sum, t) { return sum + t.amount; }, 0));
+    // Payment breakdown
+    const cash = dayTx.filter(t => t.payment === 'Cash').reduce((s, t) => s + (t.amount || 0), 0);
+    const mpesa = dayTx.filter(t => t.payment === 'M-Pesa').reduce((s, t) => s + (t.amount || 0), 0);
+    const bank = dayTx.filter(t => t.payment === 'Bank').reduce((s, t) => s + (t.amount || 0), 0);
+    const mixed = dayTx.filter(t => t.payment === 'Mixed').reduce((s, t) => s + (t.amount || 0), 0);
+    const total = cash + mpesa + bank + mixed;
+
+    document.getElementById('daily-cash-total').textContent = `KES ${formatNumber(cash)}`;
+    document.getElementById('daily-mpesa-total').textContent = `KES ${formatNumber(mpesa)}`;
+    document.getElementById('daily-bank-total').textContent = `KES ${formatNumber(bank)}`;
+    document.getElementById('daily-mixed-total').textContent = `KES ${formatNumber(mixed)}`;
+    document.getElementById('daily-total').textContent = `KES ${formatNumber(total)}`;
+
+    // Table
+    const tbody = document.getElementById('daily-transactions');
+    if (dayTx.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><i class="fas fa-inbox"></i><p>No transactions for ${dateStr}</p></td></tr>`;
+    } else {
+        tbody.innerHTML = dayTx.map(t => `
+            <tr>
+                <td>${formatTime(t.createdAt) || '--:--'}</td>
+                <td><span style="color:var(--neon-cyan)">${t.service}</span></td>
+                <td>${t.customer}</td>
+                <td style="font-family:var(--font-mono);color:var(--neon-green)">KES ${formatNumber(t.amount)}</td>
+                <td><span class="badge-payment ${t.payment.toLowerCase()}">${t.payment}</span></td>
+                <td>
+                    <button class="action-btn" onclick="deleteTx('${t.id}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+}
+
+async function deleteTx(id) {
+    if (!confirm('Delete this transaction?')) return;
+    showLoading();
+    await deleteTransaction(id);
+    hideLoading();
+    renderDailyCash();
+    renderDashboard();
+    showToast('Transaction deleted.', 'info');
+}
+
+function renderExpenses() {
+    // Expense chart
+    const categoryTotals = {};
+    expenses.forEach(e => { categoryTotals[e.category] = (categoryTotals[e.category] || 0) + (e.amount || 0); });
+
+    const ctx = document.getElementById('expense-chart');
+    if (expenseChart) expenseChart.destroy();
+
+    if (Object.keys(categoryTotals).length === 0) {
+        ctx.style.display = 'none';
+    } else {
+        ctx.style.display = 'block';
+        expenseChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(categoryTotals),
+                datasets: [{
+                    data: Object.values(categoryTotals),
+                    backgroundColor: ['#00f0ff', '#ff00a0', '#ffd700', '#00ff88', '#ff3366', '#8b5cf6', '#f97316', '#06b6d4', '#ec4899'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#8888a0', font: { family: 'Rajdhani', size: 11 }, padding: 15 } }
+                }
+            }
+        });
     }
 
-    if (revenueChart) revenueChart.destroy();
+    // Expenses table
+    const tbody = document.getElementById('expenses-list');
+    if (expenses.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="fas fa-wallet"></i><p>No expenses recorded yet.</p></td></tr>`;
+    } else {
+        tbody.innerHTML = expenses.slice(0, 50).map(e => `
+            <tr>
+                <td>${e.date}</td>
+                <td><span style="color:var(--neon-magenta)">${e.category}</span></td>
+                <td>${e.description}</td>
+                <td style="font-family:var(--font-mono);color:var(--neon-red)">KES ${formatNumber(e.amount)}</td>
+                <td><button class="action-btn" onclick="deleteEx('${e.id}')"><i class="fas fa-trash"></i></button></td>
+            </tr>
+        `).join('');
+    }
+}
 
-    revenueChart = new Chart(ctx, {
+async function deleteEx(id) {
+    if (!confirm('Delete this expense?')) return;
+    showLoading();
+    await deleteExpense(id);
+    hideLoading();
+    renderExpenses();
+    renderDashboard();
+    showToast('Expense deleted.', 'info');
+}
+
+function renderMonthly() {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    document.getElementById('current-month-label').textContent = `${monthNames[month]} ${year}`;
+
+    const monthTx = transactions.filter(t => {
+        const d = new Date(t.date);
+        return d.getFullYear() === year && d.getMonth() === month;
+    });
+    const monthEx = expenses.filter(e => {
+        const d = new Date(e.date);
+        return d.getFullYear() === year && d.getMonth() === month;
+    });
+
+    const income = monthTx.reduce((s, t) => s + (t.amount || 0), 0);
+    const expenseTotal = monthEx.reduce((s, e) => s + (e.amount || 0), 0);
+    const net = income - expenseTotal;
+
+    document.getElementById('month-income').textContent = `KES ${formatNumber(income)}`;
+    document.getElementById('month-expense').textContent = `KES ${formatNumber(expenseTotal)}`;
+    document.getElementById('month-net').textContent = `KES ${formatNumber(net)}`;
+    document.getElementById('month-net-card').style.borderColor = net >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
+
+    // Daily breakdown
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const breakdown = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayTx = monthTx.filter(t => t.date === dateStr);
+        const dayEx = monthEx.filter(e => e.date === dateStr);
+        const dayIncome = dayTx.reduce((s, t) => s + (t.amount || 0), 0);
+        const dayExpense = dayEx.reduce((s, e) => s + (e.amount || 0), 0);
+        if (dayTx.length > 0 || dayEx.length > 0) {
+            breakdown.push({ date: dateStr, count: dayTx.length, income: dayIncome, expense: dayExpense, net: dayIncome - dayExpense });
+        }
+    }
+
+    const tbody = document.getElementById('monthly-breakdown');
+    if (breakdown.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="fas fa-calendar"></i><p>No data for this month.</p></td></tr>`;
+    } else {
+        tbody.innerHTML = breakdown.map(b => `
+            <tr>
+                <td>${b.date}</td>
+                <td>${b.count}</td>
+                <td style="color:var(--neon-green);font-family:var(--font-mono)">KES ${formatNumber(b.income)}</td>
+                <td style="color:var(--neon-red);font-family:var(--font-mono)">KES ${formatNumber(b.expense)}</td>
+                <td style="color:${b.net >= 0 ? 'var(--neon-green)' : 'var(--neon-red)'};font-family:var(--font-mono)">KES ${formatNumber(b.net)}</td>
+            </tr>
+        `).join('');
+    }
+}
+
+function renderServices() {
+    const services = [
+        { name: 'E-Citizen', desc: 'Government portal services - passport, ID, good conduct, etc.', price: 'From KES 50', icon: 'fa-id-card' },
+        { name: 'KRA', desc: 'Tax services - PIN registration, returns filing, compliance.', price: 'From KES 100', icon: 'fa-file-invoice-dollar' },
+        { name: 'SHA', desc: 'Social Health Authority registration and services.', price: 'From KES 50', icon: 'fa-heartbeat' },
+        { name: 'NTSA', desc: 'Transport services - driving license, vehicle inspection, TIMS.', price: 'From KES 100', icon: 'fa-car' },
+        { name: 'HELB', desc: 'Higher Education Loans Board applications and statements.', price: 'From KES 50', icon: 'fa-graduation-cap' },
+        { name: 'Arhisasa', desc: 'Land and property registration services.', price: 'From KES 100', icon: 'fa-home' },
+        { name: 'Computer Rental', desc: 'High-speed internet, gaming, office work, browsing.', price: 'From KES 30/hr', icon: 'fa-desktop' },
+        { name: 'Printing', desc: 'Color & B/W printing, large format, bulk orders.', price: 'From KES 10/page', icon: 'fa-print' },
+        { name: 'Scanning', desc: 'Document scanning to PDF, email, or USB.', price: 'From KES 20/page', icon: 'fa-scanner' },
+        { name: 'Typing', desc: 'Professional document typing and formatting.', price: 'From KES 50/page', icon: 'fa-keyboard' },
+        { name: 'Passport Photo', desc: 'Digital and printed passport photos, all sizes.', price: 'From KES 200', icon: 'fa-camera' },
+        { name: 'Lamination', desc: 'Document lamination, ID cards, certificates.', price: 'From KES 100', icon: 'fa-layer-group' }
+    ];
+
+    document.getElementById('services-grid').innerHTML = services.map(s => `
+        <div class="service-card">
+            <div class="service-icon"><i class="fas ${s.icon}"></i></div>
+            <div class="service-name">${s.name}</div>
+            <div class="service-desc">${s.desc}</div>
+            <div class="service-price">${s.price}</div>
+        </div>
+    `).join('');
+}
+
+function renderAnalytics() {
+    // Revenue trend (last 7 days)
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        last7Days.push(formatDate(d));
+    }
+    const revenueData = last7Days.map(date => {
+        return transactions.filter(t => t.date === date).reduce((s, t) => s + (t.amount || 0), 0);
+    });
+
+    if (revenueChart) revenueChart.destroy();
+    revenueChart = new Chart(document.getElementById('revenue-chart'), {
         type: 'line',
         data: {
-            labels: days,
+            labels: last7Days.map(d => d.slice(5)),
             datasets: [{
                 label: 'Revenue',
-                data: revenues,
+                data: revenueData,
                 borderColor: '#00f0ff',
                 backgroundColor: 'rgba(0, 240, 255, 0.1)',
-                borderWidth: 2,
                 fill: true,
                 tension: 0.4,
                 pointBackgroundColor: '#00f0ff',
-                pointBorderColor: '#0a0a0f',
-                pointBorderWidth: 2,
+                pointBorderColor: '#fff',
                 pointRadius: 4
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                x: { grid: { color: 'rgba(0, 240, 255, 0.05)' }, ticks: { color: '#8a8ab5', font: { family: 'Share Tech Mono' } } },
-                y: { grid: { color: 'rgba(0, 240, 255, 0.05)' }, ticks: { color: '#8a8ab5', font: { family: 'Share Tech Mono' }, callback: function(v) { return 'KES ' + v.toLocaleString(); } } }
+                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8888a0', font: { family: 'Rajdhani' } } },
+                x: { grid: { display: false }, ticks: { color: '#8888a0', font: { family: 'Rajdhani' } } }
             }
         }
     });
-}
 
-// ===== DAILY CASH =====
-function refreshDailyCash() {
-    const filterDate = document.getElementById('filter-date').value || new Date().toISOString().split('T')[0];
-    const txs = DB.getTransactionsByDate(filterDate).sort(function(a, b) { return a.time.localeCompare(b.time); });
+    // Service performance
+    const svcCounts = {};
+    transactions.forEach(t => { svcCounts[t.service] = (svcCounts[t.service] || 0) + 1; });
+    const topSvc = Object.entries(svcCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
 
-    const tbody = document.getElementById('transactions-body');
-    const total = txs.reduce(function(sum, t) { return sum + t.amount; }, 0);
-
-    // Calculate payment method breakdown for THIS DAY
-    let dailyCash = 0, dailyMpesa = 0, dailyBank = 0, dailyMixed = 0;
-    txs.forEach(function(t) {
-        var pay = (t.payment || '').trim();
-        if (pay === 'Cash') dailyCash += t.amount;
-        else if (pay === 'M-Pesa') dailyMpesa += t.amount;
-        else if (pay === 'Bank Transfer') dailyBank += t.amount;
-        else if (pay === 'Mixed') dailyMixed += t.amount;
-    });
-
-    var dc = document.getElementById('daily-cash-total');
-    var dm = document.getElementById('daily-mpesa-total');
-    var db = document.getElementById('daily-bank-total');
-    var dmx = document.getElementById('daily-mixed-total');
-    if (dc) dc.textContent = formatKES(dailyCash);
-    if (dm) dm.textContent = formatKES(dailyMpesa);
-    if (db) db.textContent = formatKES(dailyBank);
-    if (dmx) dmx.textContent = formatKES(dailyMixed);
-
-    if (txs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#4a4a6a;"><i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:10px;"></i>No transactions for ' + filterDate + '</td></tr>';
-    } else {
-        tbody.innerHTML = txs.map(function(t) {
-            return '<tr><td>' + t.time + '</td><td><span style="color:#00f0ff;">' + t.service + '</span></td><td>' + (t.customer || '-') + '</td><td class="amount-cell">' + formatKES(t.amount) + '</td><td>' + t.payment + '</td><td><div class="action-btns"><button onclick="deleteTransaction('' + t.id + '')" title="Delete"><i class="fas fa-trash"></i></button></div></td></tr>';
-        }).join('');
-    }
-
-    document.getElementById('daily-total').textContent = formatKES(total);
-}
-
-function deleteTransaction(id) {
-    showModal('Delete Transaction', 'Are you sure you want to delete this transaction? This action cannot be undone.', function() {
-        DB.deleteTransaction(id).then(() => {
-            refreshDailyCash();
-            refreshDashboard();
-            showToast('Transaction deleted', 'success');
-        });
-    });
-}
-
-function exportDailyCash() {
-    const date = document.getElementById('filter-date').value || new Date().toISOString().split('T')[0];
-    const txs = DB.getTransactionsByDate(date);
-
-    let csv = 'Time,Service,Customer,Amount,Payment Method,Notes\n';
-    txs.forEach(function(t) {
-        csv += t.time + ',' + t.service + ',' + (t.customer || '') + ',' + t.amount + ',' + t.payment + ',' + (t.notes || '') + '\n';
-    });
-    csv += '\nTOTAL,,,' + txs.reduce(function(s, t) { return s + t.amount; }, 0) + ',,\n';
-
-    downloadCSV(csv, 'daily-cash-' + date + '.csv');
-    showToast('Daily cash exported!', 'success');
-}
-
-// ===== EXPENDITURES =====
-let expenseChart = null;
-
-function refreshExpenditures() {
-    const filterMonth = document.getElementById('exp-filter-month').value;
-    let exps = DB.expenses;
-
-    if (filterMonth !== 'all') {
-        const parts = filterMonth.split('-').map(Number);
-        exps = DB.getExpensesByMonth(parts[0], parts[1]);
-    }
-
-    exps = exps.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
-
-    const tbody = document.getElementById('expenses-body');
-    const total = exps.reduce(function(sum, e) { return sum + e.amount; }, 0);
-
-    if (exps.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#4a4a6a;"><i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:10px;"></i>No expenses recorded</td></tr>';
-    } else {
-        tbody.innerHTML = exps.map(function(e) {
-            return '<tr><td>' + e.date + '</td><td><span style="color:#ff3366;">' + e.category + '</span></td><td>' + e.description + '</td><td class="amount-cell negative">' + formatKES(e.amount) + '</td><td><div class="action-btns"><button onclick="deleteExpense(\'' + e.id + '\')" title="Delete"><i class="fas fa-trash"></i></button></div></td></tr>';
-        }).join('');
-    }
-
-    document.getElementById('exp-total').textContent = formatKES(total);
-    renderExpenseChart(exps);
-}
-
-function renderExpenseChart(exps) {
-    const ctx = document.getElementById('expense-chart');
-    if (!ctx) return;
-
-    const catTotals = {};
-    exps.forEach(function(e) { catTotals[e.category] = (catTotals[e.category] || 0) + e.amount; });
-
-    if (expenseChart) expenseChart.destroy();
-
-    expenseChart = new Chart(ctx, {
-        type: 'doughnut',
+    if (serviceChart) serviceChart.destroy();
+    serviceChart = new Chart(document.getElementById('service-chart'), {
+        type: 'bar',
         data: {
-            labels: Object.keys(catTotals),
+            labels: topSvc.map(s => s[0]),
             datasets: [{
-                data: Object.values(catTotals),
-                backgroundColor: ['#ff3366', '#ff8800', '#00f0ff', '#ff00a0', '#ffd700', '#00ff88', '#8a8ab5', '#4a4a6a'],
-                borderColor: '#16162a', borderWidth: 2
+                label: 'Count',
+                data: topSvc.map(s => s[1]),
+                backgroundColor: '#ff00a0',
+                borderRadius: 6
             }]
         },
         options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: 'right', labels: { color: '#8a8ab5', font: { family: 'Share Tech Mono', size: 11 } } } }
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8888a0' } },
+                x: { grid: { display: false }, ticks: { color: '#8888a0', font: { size: 10 } } }
+            }
+        }
+    });
+
+    // Peak hours
+    const hourCounts = {};
+    transactions.forEach(t => {
+        const h = t.createdAt?.toDate ? t.createdAt.toDate().getHours() : new Date().getHours();
+        hourCounts[h] = (hourCounts[h] || 0) + 1;
+    });
+    const hours = Array.from({length: 12}, (_, i) => `${i + 8}:00`);
+    const hourData = Array.from({length: 12}, (_, i) => hourCounts[i + 8] || 0);
+
+    if (hoursChart) hoursChart.destroy();
+    hoursChart = new Chart(document.getElementById('hours-chart'), {
+        type: 'bar',
+        data: {
+            labels: hours,
+            datasets: [{
+                label: 'Transactions',
+                data: hourData,
+                backgroundColor: '#ffd700',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8888a0' } },
+                x: { grid: { display: false }, ticks: { color: '#8888a0', font: { size: 10 } } }
+            }
+        }
+    });
+
+    // Payment methods
+    const payCounts = {};
+    transactions.forEach(t => { payCounts[t.payment] = (payCounts[t.payment] || 0) + 1; });
+
+    if (paymentChart) paymentChart.destroy();
+    paymentChart = new Chart(document.getElementById('payment-chart'), {
+        type: 'pie',
+        data: {
+            labels: Object.keys(payCounts),
+            datasets: [{
+                data: Object.values(payCounts),
+                backgroundColor: ['#00ff88', '#00f0ff', '#ffd700', '#ff00a0'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#8888a0', font: { family: 'Rajdhani', size: 11 } } }
+            }
         }
     });
 }
 
-function deleteExpense(id) {
-    showModal('Delete Expense', 'Are you sure you want to delete this expense record?', function() {
-        DB.deleteExpense(id).then(() => {
-            refreshExpenditures();
-            refreshDashboard();
-            showToast('Expense deleted', 'success');
-        });
-    });
+function renderNotifications() {
+    const list = document.getElementById('notif-list');
+    if (notifications.length === 0) {
+        list.innerHTML = '<div class="notif-item"><div class="notif-content"><div class="notif-text">No notifications</div></div></div>';
+    } else {
+        list.innerHTML = notifications.slice(0, 10).map(n => `
+            <div class="notif-item">
+                <i class="fas fa-${n.type === 'transaction' ? 'cash-register' : n.type === 'expense' ? 'wallet' : 'bell'}"></i>
+                <div class="notif-content">
+                    <div class="notif-text"><strong>${n.title}</strong> - ${n.message}</div>
+                    <div class="notif-time">${formatTime(n.createdAt) || 'Just now'}</div>
+                </div>
+            </div>
+        `).join('');
+    }
 }
 
-function exportExpenses() {
-    let csv = 'Date,Category,Description,Amount,Payment Method,Reference\n';
-    DB.expenses.forEach(function(e) {
-        csv += e.date + ',' + e.category + ',' + e.description + ',' + e.amount + ',' + e.payment + ',' + (e.reference || '') + '\n';
-    });
-    downloadCSV(csv, 'expenses-export.csv');
-    showToast('Expenses exported!', 'success');
+async function renderUsersList() {
+    const list = document.getElementById('users-list');
+    try {
+        const snap = await db.collection('users').get();
+        const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        list.innerHTML = users.map(u => `
+            <div class="user-item">
+                <div class="user-info">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${u.id}" alt="">
+                    <div>
+                        <span class="user-name">${u.name || 'Unknown'}</span>
+                        <span class="user-email">${u.email}</span>
+                    </div>
+                </div>
+                <span class="user-role ${u.role?.toLowerCase() || 'manager'}">${u.role || 'Manager'}</span>
+            </div>
+        `).join('');
+    } catch (err) {
+        list.innerHTML = '<div class="empty-state"><p>Error loading users.</p></div>';
+    }
 }
 
-// ===== MONTHLY =====
-let currentMonth = new Date();
-let monthlyPieChart = null;
+function updateNotificationBadge() {
+    const unread = notifications.filter(n => !n.read).length;
+    const badge = document.getElementById('notif-badge');
+    badge.textContent = unread;
+    badge.style.display = unread > 0 ? 'flex' : 'none';
+}
 
-function refreshMonthly() {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
+// ============================================
+// SEARCH
+// ============================================
+function handleSearch(e) {
+    const query = e.target.value.toLowerCase().trim();
+    const results = document.getElementById('search-results');
 
-    document.getElementById('display-month').textContent = currentMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-
-    const monthTx = DB.getTransactionsByMonth(year, month);
-    const monthExp = DB.getExpensesByMonth(year, month);
-
-    const income = monthTx.reduce(function(s, t) { return s + t.amount; }, 0);
-    const expenses = monthExp.reduce(function(s, e) { return s + e.amount; }, 0);
-    const profit = income - expenses;
-
-    document.getElementById('month-income').textContent = formatKES(income);
-    document.getElementById('month-expenses').textContent = formatKES(expenses);
-    document.getElementById('month-profit').textContent = formatKES(profit);
-    document.getElementById('month-profit').className = 'm-value ' + (profit >= 0 ? 'positive' : 'negative');
-    document.getElementById('month-transactions').textContent = monthTx.length;
-
-    const ctx = document.getElementById('monthly-pie-chart');
-    if (ctx) {
-        const serviceTotals = {};
-        monthTx.forEach(function(t) { serviceTotals[t.service] = (serviceTotals[t.service] || 0) + t.amount; });
-
-        if (monthlyPieChart) monthlyPieChart.destroy();
-        monthlyPieChart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: Object.keys(serviceTotals),
-                datasets: [{
-                    data: Object.values(serviceTotals),
-                    backgroundColor: ['#00f0ff', '#ff00a0', '#ffd700', '#00ff88', '#ff3366', '#ff8800', '#8a8ab5', '#4a4a6a'],
-                    borderColor: '#16162a', borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { position: 'right', labels: { color: '#8a8ab5', font: { family: 'Share Tech Mono', size: 11 } } } }
-            }
-        });
+    if (query.length < 2) {
+        results.classList.remove('active');
+        return;
     }
 
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const tbody = document.getElementById('monthly-body');
+    const matches = [];
 
-    let rows = '';
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-        const dayTx = DB.getTransactionsByDate(dateStr);
-        const dayExp = DB.expenses.filter(function(e) { return e.date === dateStr; });
-        const dayIncome = dayTx.reduce(function(s, t) { return s + t.amount; }, 0);
-        const dayExpense = dayExp.reduce(function(s, e) { return s + e.amount; }, 0);
-
-        if (dayIncome > 0 || dayExpense > 0) {
-            const dateObj = new Date(dateStr);
-            rows += '<tr><td>' + dateStr + '</td><td>' + dateObj.toLocaleDateString('en-GB', { weekday: 'short' }) + '</td><td style="color:#00ff88;">' + formatKES(dayIncome) + '</td><td style="color:#ff3366;">' + formatKES(dayExpense) + '</td><td style="color:' + (dayIncome - dayExpense >= 0 ? '#00ff88' : '#ff3366') + ';">' + formatKES(dayIncome - dayExpense) + '</td><td>' + dayTx.length + '</td></tr>';
+    transactions.forEach(t => {
+        if (t.customer?.toLowerCase().includes(query) || t.service?.toLowerCase().includes(query)) {
+            matches.push({ type: 'Transaction', title: `${t.service} - ${t.customer}`, meta: `KES ${t.amount} • ${t.date}`, date: t.date });
         }
+    });
+
+    expenses.forEach(ex => {
+        if (ex.description?.toLowerCase().includes(query) || ex.category?.toLowerCase().includes(query)) {
+            matches.push({ type: 'Expense', title: `${ex.category} - ${ex.description}`, meta: `KES ${ex.amount} • ${ex.date}`, date: ex.date });
+        }
+    });
+
+    if (matches.length === 0) {
+        results.innerHTML = '<div class="search-result-item"><div class="search-result-title">No results found</div></div>';
+    } else {
+        results.innerHTML = matches.slice(0, 8).map(m => `
+            <div class="search-result-item" data-date="${m.date}">
+                <div class="search-result-type">${m.type}</div>
+                <div class="search-result-title">${m.title}</div>
+                <div class="search-result-meta">${m.meta}</div>
+            </div>
+        `).join('');
+
+        results.querySelectorAll('.search-result-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const date = item.dataset.date;
+                if (date) {
+                    document.getElementById('daily-date').value = date;
+                    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                    document.querySelector('[data-section="daily-cash"]').classList.add('active');
+                    document.getElementById('daily-cash').classList.add('active');
+                    renderDailyCash();
+                }
+                results.classList.remove('active');
+                document.getElementById('global-search').value = '';
+            });
+        });
     }
 
-    tbody.innerHTML = rows || '<tr><td colspan="6" style="text-align:center;padding:30px;color:#4a4a6a;">No data for this month</td></tr>';
+    results.classList.add('active');
 }
 
-function generateMonthlyReport() {
+// ============================================
+// EXPORT
+// ============================================
+function exportMonthlyCSV() {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    const monthTx = DB.getTransactionsByMonth(year, month);
-    const monthExp = DB.getExpensesByMonth(year, month);
+    const monthTx = transactions.filter(t => {
+        const d = new Date(t.date);
+        return d.getFullYear() === year && d.getMonth() === month;
+    });
 
-    const income = monthTx.reduce(function(s, t) { return s + t.amount; }, 0);
-    const expenses = monthExp.reduce(function(s, e) { return s + e.amount; }, 0);
-    const profit = income - expenses;
+    let csv = 'Date,Service,Customer,Amount,Payment Method,Notes\n';
+    monthTx.forEach(t => {
+        csv += `${t.date},${t.service},${t.customer},${t.amount},${t.payment},${t.notes || ''}\n`;
+    });
 
-    let csv = 'MONTHLY REPORT - ' + currentMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) + '\n';
-    csv += 'Generated: ' + new Date().toLocaleString() + '\n\n';
-    csv += 'SUMMARY\n';
-    csv += 'Total Income,' + income + '\n';
-    csv += 'Total Expenses,' + expenses + '\n';
-    csv += 'Net Profit,' + profit + '\n';
-    csv += 'Total Transactions,' + monthTx.length + '\n\n';
-    csv += 'INCOME BY SERVICE\n';
-    const svcTotals = {};
-    monthTx.forEach(function(t) { svcTotals[t.service] = (svcTotals[t.service] || 0) + t.amount; });
-    Object.entries(svcTotals).forEach(function(item) { csv += item[0] + ',' + item[1] + '\n'; });
-    csv += '\nEXPENSES BY CATEGORY\n';
-    const catTotals = {};
-    monthExp.forEach(function(e) { catTotals[e.category] = (catTotals[e.category] || 0) + e.amount; });
-    Object.entries(catTotals).forEach(function(item) { csv += item[0] + ',' + item[1] + '\n'; });
-
-    downloadCSV(csv, 'monthly-report-' + year + '-' + String(month+1).padStart(2,'0') + '.csv');
-    showToast('Monthly report generated!', 'success');
+    downloadFile(csv, `lilians-cafe-${year}-${month + 1}.csv`, 'text/csv');
+    showToast('Monthly report downloaded!', 'success');
 }
 
-// ===== ANALYTICS =====
-let serviceBarChart, peakHoursChart, paymentChart, expenseCatChart;
-
-function refreshAnalytics() {
-    const svcCtx = document.getElementById('service-bar-chart');
-    if (svcCtx) {
-        const svcCounts = {};
-        DB.transactions.forEach(function(t) { svcCounts[t.service] = (svcCounts[t.service] || 0) + 1; });
-
-        if (serviceBarChart) serviceBarChart.destroy();
-        serviceBarChart = new Chart(svcCtx, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(svcCounts),
-                datasets: [{
-                    label: 'Transactions',
-                    data: Object.values(svcCounts),
-                    backgroundColor: 'rgba(0, 240, 255, 0.6)',
-                    borderColor: '#00f0ff',
-                    borderWidth: 1,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { ticks: { color: '#8a8ab5', font: { family: 'Share Tech Mono', size: 10 } }, grid: { display: false } },
-                    y: { ticks: { color: '#8a8ab5', font: { family: 'Share Tech Mono' } }, grid: { color: 'rgba(0,240,255,0.05)' } }
-                }
-            }
-        });
-    }
-
-    const peakCtx = document.getElementById('peak-hours-chart');
-    if (peakCtx) {
-        const hourCounts = new Array(24).fill(0);
-        DB.transactions.forEach(function(t) {
-            const h = parseInt(t.time.split(':')[0]);
-            hourCounts[h]++;
-        });
-
-        if (peakHoursChart) peakHoursChart.destroy();
-        peakHoursChart = new Chart(peakCtx, {
-            type: 'bar',
-            data: {
-                labels: Array.from({length: 24}, function(_, i) { return String(i).padStart(2,'0') + ':00'; }),
-                datasets: [{
-                    label: 'Transactions',
-                    data: hourCounts,
-                    backgroundColor: 'rgba(255, 0, 160, 0.6)',
-                    borderColor: '#ff00a0',
-                    borderWidth: 1,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { ticks: { color: '#8a8ab5', font: { family: 'Share Tech Mono', size: 9 } }, grid: { display: false } },
-                    y: { ticks: { color: '#8a8ab5', font: { family: 'Share Tech Mono' } }, grid: { color: 'rgba(255,0,160,0.05)' } }
-                }
-            }
-        });
-    }
-
-    const payCtx = document.getElementById('payment-chart');
-    if (payCtx) {
-        const payCounts = {};
-        DB.transactions.forEach(function(t) { payCounts[t.payment] = (payCounts[t.payment] || 0) + 1; });
-
-        if (paymentChart) paymentChart.destroy();
-        paymentChart = new Chart(payCtx, {
-            type: 'doughnut',
-            data: {
-                labels: Object.keys(payCounts),
-                datasets: [{
-                    data: Object.values(payCounts),
-                    backgroundColor: ['#00f0ff', '#ff00a0', '#ffd700', '#00ff88'],
-                    borderColor: '#16162a', borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom', labels: { color: '#8a8ab5', font: { family: 'Share Tech Mono' } } } }
-            }
-        });
-    }
-
-    const expCatCtx = document.getElementById('expense-cat-chart');
-    if (expCatCtx) {
-        const catCounts = {};
-        DB.expenses.forEach(function(e) { catCounts[e.category] = (catCounts[e.category] || 0) + e.amount; });
-
-        if (expenseCatChart) expenseCatChart.destroy();
-        expenseCatChart = new Chart(expCatCtx, {
-            type: 'polarArea',
-            data: {
-                labels: Object.keys(catCounts),
-                datasets: [{
-                    data: Object.values(catCounts),
-                    backgroundColor: ['#ff3366', '#ff8800', '#00f0ff', '#ff00a0', '#ffd700', '#00ff88', '#8a8ab5', '#4a4a6a'],
-                    borderColor: '#16162a', borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { position: 'right', labels: { color: '#8a8ab5', font: { family: 'Share Tech Mono', size: 10 } } } }
-            }
-        });
-    }
+function exportAllData() {
+    const data = { transactions, expenses, exportedAt: new Date().toISOString() };
+    downloadFile(JSON.stringify(data, null, 2), 'lilians-cafe-backup.json', 'application/json');
+    showToast('Full backup downloaded!', 'success');
 }
 
-// ===== UTILITIES =====
-function formatKES(amount) {
-    return 'KES ' + amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function downloadCSV(content, filename) {
-    const blob = new Blob([content], { type: 'text/csv' });
+function downloadFile(content, filename, type) {
+    const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
+    a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
 }
 
-// ===== EVENT LISTENERS =====
-document.addEventListener('DOMContentLoaded', async function() {
-    // Hide loading screen initially — login screen shows first
-    document.getElementById('loading-screen').classList.add('hidden');
-    document.getElementById('app').style.display = 'none';
-
-    // Login screen is visible by default
-    // User must authenticate before app loads
-});
-
-// Called after successful login
-async function initApp() {
-    // Show loading
-    document.getElementById('loading-screen').classList.remove('hidden');
-    document.getElementById('app').style.display = 'none';
-
-    // Load from Firebase
-    try {
-        await DB.load();
-        if (DB.transactions.length === 0 && DB.expenses.length === 0) {
-            await seedDemoData();
-        }
-        showToast('Welcome back, ' + currentUser + '!', 'success');
-    } catch (err) {
-        console.error('Failed to load from Firebase:', err);
-        showToast('Firebase connection failed. Check console.', 'error');
-    }
-
-    // Hide loading, show app
-    setTimeout(function() {
-        document.getElementById('loading-screen').classList.add('hidden');
-        document.getElementById('app').style.display = 'flex';
-    }, 1500);
-
-    initParticles();
-    updateClock();
-    setInterval(updateClock, 1000);
-
-    // Navigation
-    document.querySelectorAll('.nav-item').forEach(function(btn) {
-        btn.addEventListener('click', function() { navigateTo(btn.dataset.section); });
-    });
-
-    // Notification bell
-    document.getElementById('notification-btn').addEventListener('click', function(e) {
-        e.stopPropagation();
-        toggleDropdown('notification-dropdown');
-    });
-
-    // Profile dropdown
-    document.getElementById('profile-btn').addEventListener('click', function(e) {
-        e.stopPropagation();
-        toggleDropdown('profile-dropdown');
-    });
-
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', function() {
-        closeAllDropdowns();
-    });
-
-    // Prevent dropdown close when clicking inside
-    document.getElementById('notification-dropdown').addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-    document.getElementById('profile-dropdown').addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-
-    // Search
-    initSearch();
-
-    // Form defaults
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-    const timeStr = now.toTimeString().slice(0, 5);
-
-    document.getElementById('trans-date').value = dateStr;
-    document.getElementById('trans-time').value = timeStr;
-    document.getElementById('exp-date').value = dateStr;
-    document.getElementById('filter-date').value = dateStr;
-
-    // Transaction form
-    document.getElementById('transaction-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const t = {
-            date: document.getElementById('trans-date').value,
-            time: document.getElementById('trans-time').value,
-            service: document.getElementById('trans-service').value,
-            customer: document.getElementById('trans-customer').value,
-            amount: parseFloat(document.getElementById('trans-amount').value),
-            payment: document.getElementById('trans-payment').value,
-            notes: document.getElementById('trans-notes').value
-        };
-
-        try {
-            await DB.addTransaction(t);
-            e.target.reset();
-            document.getElementById('trans-date').value = dateStr;
-            document.getElementById('trans-time').value = new Date().toTimeString().slice(0, 5);
-            refreshDailyCash();
-            refreshDashboard();
-            showToast('Transaction saved to Firebase!', 'success');
-        } catch (err) {
-            showToast('Failed to save transaction', 'error');
-        }
-    });
-
-    // Expense form
-    document.getElementById('expense-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const ex = {
-            date: document.getElementById('exp-date').value,
-            category: document.getElementById('exp-category').value,
-            description: document.getElementById('exp-description').value,
-            amount: parseFloat(document.getElementById('exp-amount').value),
-            payment: document.getElementById('exp-payment').value,
-            reference: document.getElementById('exp-reference').value
-        };
-
-        try {
-            await DB.addExpense(ex);
-            e.target.reset();
-            document.getElementById('exp-date').value = dateStr;
-            refreshExpenditures();
-            refreshDashboard();
-            showToast('Expense saved to Firebase!', 'success');
-        } catch (err) {
-            showToast('Failed to save expense', 'error');
-        }
-    });
-
-    document.getElementById('filter-date').addEventListener('change', refreshDailyCash);
-
-    // Month filter
-    const monthFilter = document.getElementById('exp-filter-month');
-    for (let i = 0; i < 12; i++) {
-        const d = new Date();
-        d.setMonth(d.getMonth() - i);
-        const val = d.getFullYear() + '-' + String(d.getMonth()).padStart(2, '0');
-        const label = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-        const opt = document.createElement('option');
-        opt.value = val;
-        opt.textContent = label;
-        monthFilter.appendChild(opt);
-    }
-    monthFilter.addEventListener('change', refreshExpenditures);
-
-    // Monthly nav
-    document.getElementById('prev-month').addEventListener('click', function() {
-        currentMonth.setMonth(currentMonth.getMonth() - 1);
-        refreshMonthly();
-    });
-    document.getElementById('next-month').addEventListener('click', function() {
-        currentMonth.setMonth(currentMonth.getMonth() + 1);
-        refreshMonthly();
-    });
-
-    // Modal confirm
-    document.getElementById('modal-confirm').addEventListener('click', function() {
-        if (modalCallback) modalCallback();
-        closeModal();
-    });
-
-    // Initial render
-    refreshDashboard();
-    refreshDailyCash();
-    refreshExpenditures();
-    refreshMonthly();
+// ============================================
+// UTILITIES
+// ============================================
+function formatDate(date) {
+    return date.toISOString().split('T')[0];
 }
+
+function formatNumber(num) {
+    return (num || 0).toLocaleString('en-KE');
+}
+
+function formatTime(timestamp) {
+    if (!timestamp) return '';
+    let date;
+    if (timestamp.toDate) {
+        date = timestamp.toDate();
+    } else if (typeof timestamp === 'string') {
+        date = new Date(timestamp);
+    } else {
+        return '';
+    }
+    return date.toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Payment badge styles (injected)
+const style = document.createElement('style');
+style.textContent = `
+    .badge-payment { padding: 3px 10px; border-radius: 6px; font-size: 11px; font-family: var(--font-mono); font-weight: 600; }
+    .badge-payment.cash { background: rgba(0,255,136,0.15); color: var(--neon-green); }
+    .badge-payment.m-pesa { background: rgba(0,240,255,0.15); color: var(--neon-cyan); }
+    .badge-payment.bank { background: rgba(255,215,0,0.15); color: var(--neon-gold); }
+    .badge-payment.mixed { background: rgba(255,0,160,0.15); color: var(--neon-magenta); }
+`;
+document.head.appendChild(style);
