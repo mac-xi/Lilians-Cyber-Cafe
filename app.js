@@ -1,26 +1,21 @@
 /* ============================================
-   LILIAN'S CYBER CAFÉ — FIREBASE EDITION
-   Real persistent database via Google Firestore
+   LILIAN'S CYBER CAFÉ — FIREBASE EDITION v2.1
+   Fixed: Notifications, Profile, Search, Payment Totals, Favicon
    ============================================ */
 
-// ===== FIREBASE DB OBJECT =====
+// ===== FIREBASE DB =====
 const DB = {
     transactionsRef: db.collection('transactions'),
     expensesRef: db.collection('expenses'),
-
     transactions: [],
     expenses: [],
 
     async load() {
         try {
-            // Load transactions from Firebase
             const txSnapshot = await this.transactionsRef.orderBy('createdAt', 'desc').get();
             this.transactions = txSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            // Load expenses from Firebase
             const exSnapshot = await this.expensesRef.orderBy('createdAt', 'desc').get();
             this.expenses = exSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
             console.log('Firebase loaded:', this.transactions.length, 'transactions,', this.expenses.length, 'expenses');
         } catch (err) {
             console.error('Firebase load error:', err);
@@ -36,7 +31,7 @@ const DB = {
             this.transactions.unshift(t);
             return t;
         } catch (err) {
-            console.error('Firebase add transaction error:', err);
+            console.error('Firebase add error:', err);
             showToast('Failed to save transaction', 'error');
             throw err;
         }
@@ -50,7 +45,7 @@ const DB = {
             this.expenses.unshift(e);
             return e;
         } catch (err) {
-            console.error('Firebase add expense error:', err);
+            console.error('Firebase add error:', err);
             showToast('Failed to save expense', 'error');
             throw err;
         }
@@ -61,8 +56,8 @@ const DB = {
             await this.transactionsRef.doc(id).delete();
             this.transactions = this.transactions.filter(t => t.id !== id);
         } catch (err) {
-            console.error('Firebase delete transaction error:', err);
-            showToast('Failed to delete transaction', 'error');
+            console.error('Firebase delete error:', err);
+            showToast('Failed to delete', 'error');
             throw err;
         }
     },
@@ -72,8 +67,8 @@ const DB = {
             await this.expensesRef.doc(id).delete();
             this.expenses = this.expenses.filter(e => e.id !== id);
         } catch (err) {
-            console.error('Firebase delete expense error:', err);
-            showToast('Failed to delete expense', 'error');
+            console.error('Firebase delete error:', err);
+            showToast('Failed to delete', 'error');
             throw err;
         }
     },
@@ -97,21 +92,22 @@ const DB = {
     }
 };
 
-// ===== DEMO DATA (Only runs if Firebase is empty) =====
+// ===== DEMO DATA =====
 async function seedDemoData() {
     if (DB.transactions.length > 0 || DB.expenses.length > 0) return;
 
     const services = ['E-Citizen', 'KRA', 'SHA', 'NTSA', 'Cyber Services', 'Photocopy', 'Printing', 'HELB', 'Arhisasa'];
     const customers = ['John Mwangi', 'Alice Wanjiku', 'Peter Ochieng', 'Grace Akinyi', 'James Kimani', 'Mary Njeri', 'David Otieno', 'Sarah Muthoni'];
     const categories = ['Rent', 'Electricity', 'Internet', 'Stationery', 'Printer Ink', 'Computer Maintenance', 'Transport', 'Food'];
+    const payments = ['Cash', 'M-Pesa', 'Bank Transfer'];
 
     const today = new Date();
 
-    // Seed transactions
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 35; i++) {
         const date = new Date(today);
         date.setDate(date.getDate() - Math.floor(Math.random() * 25));
         const dateStr = date.toISOString().split('T')[0];
+        const payment = payments[Math.floor(Math.random() * payments.length)];
 
         await DB.transactionsRef.add({
             date: dateStr,
@@ -119,13 +115,12 @@ async function seedDemoData() {
             service: services[Math.floor(Math.random() * services.length)],
             customer: customers[Math.floor(Math.random() * customers.length)],
             amount: Math.floor(Math.random() * 2500) + 50,
-            payment: ['Cash', 'M-Pesa', 'Bank Transfer'][Math.floor(Math.random() * 3)],
+            payment: payment,
             notes: '',
             createdAt: firebase.firestore.Timestamp.fromDate(date)
         });
     }
 
-    // Seed expenses
     for (let i = 0; i < 15; i++) {
         const date = new Date(today);
         date.setDate(date.getDate() - Math.floor(Math.random() * 25));
@@ -141,7 +136,6 @@ async function seedDemoData() {
         });
     }
 
-    // Reload after seeding
     await DB.load();
     showToast('Demo data loaded to Firebase!', 'success');
 }
@@ -154,37 +148,33 @@ function initParticles() {
     canvas.height = window.innerHeight;
 
     const particles = [];
-    const particleCount = 60;
-
-    class Particle {
-        constructor() { this.reset(); }
-        reset() {
-            this.x = Math.random() * canvas.width;
-            this.y = Math.random() * canvas.height;
-            this.size = Math.random() * 2 + 0.5;
-            this.speedX = (Math.random() - 0.5) * 0.5;
-            this.speedY = (Math.random() - 0.5) * 0.5;
-            this.opacity = Math.random() * 0.5 + 0.1;
-            this.color = Math.random() > 0.5 ? '0, 240, 255' : '255, 0, 160';
-        }
-        update() {
-            this.x += this.speedX;
-            this.y += this.speedY;
-            if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) this.reset();
-        }
-        draw() {
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(' + this.color + ', ' + this.opacity + ')';
-            ctx.fill();
-        }
+    for (let i = 0; i < 60; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2 + 0.5,
+            speedX: (Math.random() - 0.5) * 0.5,
+            speedY: (Math.random() - 0.5) * 0.5,
+            opacity: Math.random() * 0.5 + 0.1,
+            color: Math.random() > 0.5 ? '0, 240, 255' : '255, 0, 160'
+        });
     }
-
-    for (let i = 0; i < particleCount; i++) particles.push(new Particle());
 
     function animate() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particles.forEach(p => { p.update(); p.draw(); });
+        particles.forEach(p => {
+            p.x += p.speedX;
+            p.y += p.speedY;
+            if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+                p.x = Math.random() * canvas.width;
+                p.y = Math.random() * canvas.height;
+            }
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(' + p.color + ', ' + p.opacity + ')';
+            ctx.fill();
+        });
+
         particles.forEach((p1, i) => {
             particles.slice(i + 1).forEach(p2 => {
                 const dx = p1.x - p2.x, dy = p1.y - p2.y;
@@ -235,11 +225,108 @@ function navigateTo(sectionId) {
     };
     document.querySelector('.current-page').textContent = pageNames[sectionId] || 'Dashboard';
 
+    // Close any open dropdowns
+    closeAllDropdowns();
+
     if (sectionId === 'dashboard') refreshDashboard();
     if (sectionId === 'daily-cash') refreshDailyCash();
     if (sectionId === 'expenditures') refreshExpenditures();
     if (sectionId === 'monthly') refreshMonthly();
     if (sectionId === 'analytics') refreshAnalytics();
+}
+
+// ===== DROPDOWN MANAGEMENT =====
+function closeAllDropdowns() {
+    document.querySelectorAll('.notification-dropdown, .profile-dropdown, .search-dropdown').forEach(d => {
+        d.classList.remove('active');
+    });
+}
+
+function toggleDropdown(id) {
+    const dropdown = document.getElementById(id);
+    const isActive = dropdown.classList.contains('active');
+    closeAllDropdowns();
+    if (!isActive) dropdown.classList.add('active');
+}
+
+function clearNotifications() {
+    document.getElementById('notif-list').innerHTML = '<div style="padding:20px;text-align:center;color:#4a4a6a;"><i class="fas fa-check-circle" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>All caught up!</div>';
+    document.getElementById('notif-badge').style.display = 'none';
+    showToast('Notifications cleared', 'success');
+}
+
+// ===== SEARCH =====
+function initSearch() {
+    const searchInput = document.getElementById('global-search');
+    const dropdown = document.getElementById('search-dropdown');
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        if (query.length < 1) {
+            dropdown.classList.remove('active');
+            return;
+        }
+
+        const results = [];
+
+        // Search transactions
+        DB.transactions.forEach(t => {
+            if ((t.customer && t.customer.toLowerCase().includes(query)) ||
+                t.service.toLowerCase().includes(query) ||
+                t.amount.toString().includes(query) ||
+                t.date.includes(query)) {
+                results.push({ type: 'transaction', data: t });
+            }
+        });
+
+        // Search expenses
+        DB.expenses.forEach(e => {
+            if (e.category.toLowerCase().includes(query) ||
+                e.description.toLowerCase().includes(query) ||
+                e.amount.toString().includes(query)) {
+                results.push({ type: 'expense', data: e });
+            }
+        });
+
+        // Search services
+        const services = ['E-Citizen', 'KRA', 'SHA', 'NTSA', 'HELB', 'Arhisasa', 'Cyber Services', 'Photocopy', 'Printing'];
+        services.forEach(s => {
+            if (s.toLowerCase().includes(query)) {
+                results.push({ type: 'service', data: { name: s } });
+            }
+        });
+
+        if (results.length === 0) {
+            dropdown.innerHTML = '<div class="search-no-results"><i class="fas fa-search" style="display:block;margin-bottom:8px;font-size:1.2rem;"></i>No results found for "' + query + '"</div>';
+        } else {
+            dropdown.innerHTML = results.slice(0, 8).map(r => {
+                if (r.type === 'transaction') {
+                    return '<div class="search-result-item" onclick="navigateTo(\'daily-cash\');document.getElementById(\'filter-date\').value=\'' + r.data.date + '\';refreshDailyCash();closeAllDropdowns();document.getElementById(\'global-search\').value=\'\';">' +
+                        '<div class="search-result-icon"><i class="fas fa-coins"></i></div>' +
+                        '<div class="search-result-info"><h5>' + r.data.service + '</h5><span>' + (r.data.customer || 'Walk-in') + ' • ' + r.data.date + '</span></div>' +
+                        '<div class="search-result-amount">+' + formatKES(r.data.amount) + '</div></div>';
+                } else if (r.type === 'expense') {
+                    return '<div class="search-result-item" onclick="navigateTo(\'expenditures\');closeAllDropdowns();document.getElementById(\'global-search\').value=\'\';">' +
+                        '<div class="search-result-icon" style="background:rgba(255,51,102,0.15);color:#ff3366;"><i class="fas fa-fire"></i></div>' +
+                        '<div class="search-result-info"><h5>' + r.data.category + '</h5><span>' + r.data.description + ' • ' + r.data.date + '</span></div>' +
+                        '<div class="search-result-amount" style="color:#ff3366;">-' + formatKES(r.data.amount) + '</div></div>';
+                } else {
+                    return '<div class="search-result-item" onclick="navigateTo(\'services\');closeAllDropdowns();document.getElementById(\'global-search\').value=\'\';">' +
+                        '<div class="search-result-icon"><i class="fas fa-briefcase"></i></div>' +
+                        '<div class="search-result-info"><h5>' + r.data.name + '</h5><span>Service</span></div></div>';
+                }
+            }).join('');
+        }
+
+        dropdown.classList.add('active');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-box')) {
+            dropdown.classList.remove('active');
+        }
+    });
 }
 
 // ===== TOAST =====
@@ -297,6 +384,18 @@ function refreshDashboard() {
     const change = yestRevenue > 0 ? ((todayRevenue - yestRevenue) / yestRevenue * 100).toFixed(1) : 0;
     document.getElementById('revenue-change').textContent = (change >= 0 ? '+' : '') + change + '%';
 
+    // ===== PAYMENT METHOD TOTALS =====
+    const cashTotal = DB.transactions.filter(t => t.payment === 'Cash').reduce((s, t) => s + t.amount, 0);
+    const mpesaTotal = DB.transactions.filter(t => t.payment === 'M-Pesa').reduce((s, t) => s + t.amount, 0);
+    const bankTotal = DB.transactions.filter(t => t.payment === 'Bank Transfer').reduce((s, t) => s + t.amount, 0);
+    const grandTotal = DB.transactions.reduce((s, t) => s + t.amount, 0);
+
+    document.getElementById('cash-total').textContent = formatKES(cashTotal);
+    document.getElementById('mpesa-total').textContent = formatKES(mpesaTotal);
+    document.getElementById('bank-total').textContent = formatKES(bankTotal);
+    document.getElementById('grand-total').textContent = formatKES(grandTotal);
+
+    // Recent transactions
     const recentList = document.getElementById('recent-transactions');
     const recent = DB.transactions.slice().sort(function(a, b) {
         return new Date(b.createdAt?.seconds ? b.createdAt.seconds * 1000 : b.createdAt) - 
@@ -311,6 +410,7 @@ function refreshDashboard() {
         }).join('');
     }
 
+    // Top services
     const serviceCounts = {};
     DB.transactions.forEach(function(t) { serviceCounts[t.service] = (serviceCounts[t.service] || 0) + 1; });
     const topServices = Object.entries(serviceCounts).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 6);
@@ -368,18 +468,8 @@ function renderRevenueChart() {
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                x: {
-                    grid: { color: 'rgba(0, 240, 255, 0.05)' },
-                    ticks: { color: '#8a8ab5', font: { family: 'Share Tech Mono' } }
-                },
-                y: {
-                    grid: { color: 'rgba(0, 240, 255, 0.05)' },
-                    ticks: {
-                        color: '#8a8ab5',
-                        font: { family: 'Share Tech Mono' },
-                        callback: function(v) { return 'KES ' + v.toLocaleString(); }
-                    }
-                }
+                x: { grid: { color: 'rgba(0, 240, 255, 0.05)' }, ticks: { color: '#8a8ab5', font: { family: 'Share Tech Mono' } } },
+                y: { grid: { color: 'rgba(0, 240, 255, 0.05)' }, ticks: { color: '#8a8ab5', font: { family: 'Share Tech Mono' }, callback: function(v) { return 'KES ' + v.toLocaleString(); } } }
             }
         }
     });
@@ -473,19 +563,12 @@ function renderExpenseChart(exps) {
             datasets: [{
                 data: Object.values(catTotals),
                 backgroundColor: ['#ff3366', '#ff8800', '#00f0ff', '#ff00a0', '#ffd700', '#00ff88', '#8a8ab5', '#4a4a6a'],
-                borderColor: '#16162a',
-                borderWidth: 2
+                borderColor: '#16162a', borderWidth: 2
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: { color: '#8a8ab5', font: { family: 'Share Tech Mono', size: 11 } }
-                }
-            }
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'right', labels: { color: '#8a8ab5', font: { family: 'Share Tech Mono', size: 11 } } } }
         }
     });
 }
@@ -517,9 +600,7 @@ function refreshMonthly() {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
 
-    document.getElementById('display-month').textContent = currentMonth.toLocaleDateString('en-GB', {
-        month: 'long', year: 'numeric'
-    });
+    document.getElementById('display-month').textContent = currentMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
     const monthTx = DB.getTransactionsByMonth(year, month);
     const monthExp = DB.getExpensesByMonth(year, month);
@@ -552,9 +633,7 @@ function refreshMonthly() {
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'right', labels: { color: '#8a8ab5', font: { family: 'Share Tech Mono', size: 11 } } }
-                }
+                plugins: { legend: { position: 'right', labels: { color: '#8a8ab5', font: { family: 'Share Tech Mono', size: 11 } } } }
             }
         });
     }
@@ -744,22 +823,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('loading-screen').classList.remove('hidden');
     document.getElementById('app').style.display = 'none';
 
-    // Load from Firebase FIRST
+    // Load from Firebase
     try {
         await DB.load();
-
-        // If empty, seed demo data
         if (DB.transactions.length === 0 && DB.expenses.length === 0) {
             await seedDemoData();
         }
-
         showToast('Connected to Firebase!', 'success');
     } catch (err) {
         console.error('Failed to load from Firebase:', err);
         showToast('Firebase connection failed. Check console.', 'error');
     }
 
-    // Hide loading, show app
+    // Hide loading
     setTimeout(function() {
         document.getElementById('loading-screen').classList.add('hidden');
         document.getElementById('app').style.display = 'flex';
@@ -769,10 +845,40 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateClock();
     setInterval(updateClock, 1000);
 
+    // Navigation
     document.querySelectorAll('.nav-item').forEach(function(btn) {
         btn.addEventListener('click', function() { navigateTo(btn.dataset.section); });
     });
 
+    // Notification bell
+    document.getElementById('notification-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleDropdown('notification-dropdown');
+    });
+
+    // Profile dropdown
+    document.getElementById('profile-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleDropdown('profile-dropdown');
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function() {
+        closeAllDropdowns();
+    });
+
+    // Prevent dropdown close when clicking inside
+    document.getElementById('notification-dropdown').addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    document.getElementById('profile-dropdown').addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+
+    // Search
+    initSearch();
+
+    // Form defaults
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = now.toTimeString().slice(0, 5);
@@ -782,7 +888,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('exp-date').value = dateStr;
     document.getElementById('filter-date').value = dateStr;
 
-    // Transaction form - async for Firebase
+    // Transaction form
     document.getElementById('transaction-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         const t = {
@@ -808,7 +914,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
-    // Expense form - async for Firebase
+    // Expense form
     document.getElementById('expense-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         const ex = {
@@ -834,6 +940,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     document.getElementById('filter-date').addEventListener('change', refreshDailyCash);
 
+    // Month filter
     const monthFilter = document.getElementById('exp-filter-month');
     for (let i = 0; i < 12; i++) {
         const d = new Date();
@@ -847,6 +954,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     monthFilter.addEventListener('change', refreshExpenditures);
 
+    // Monthly nav
     document.getElementById('prev-month').addEventListener('click', function() {
         currentMonth.setMonth(currentMonth.getMonth() - 1);
         refreshMonthly();
@@ -857,13 +965,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // Modal confirm
-    const confirmBtn = document.getElementById('modal-confirm');
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', function() {
-            if (modalCallback) modalCallback();
-            closeModal();
-        });
-    }
+    document.getElementById('modal-confirm').addEventListener('click', function() {
+        if (modalCallback) modalCallback();
+        closeModal();
+    });
 
     // Initial render
     refreshDashboard();
