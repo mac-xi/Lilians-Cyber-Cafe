@@ -284,6 +284,22 @@ function initApp() {
     document.getElementById('tx-date').value = formatDate(new Date());
     document.getElementById('expense-date').value = formatDate(new Date());
 
+
+    // System Clock
+    function updateClock() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-KE', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit',
+            hour12: false 
+        });
+        const clockEl = document.getElementById('clock-time');
+        if (clockEl) clockEl.textContent = timeStr;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
     // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
