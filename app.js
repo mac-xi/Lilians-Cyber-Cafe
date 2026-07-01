@@ -239,8 +239,9 @@ async function addTransaction(tx) {
     tx.createdBy = currentUser.uid;
     const docRef = await db.collection('transactions').add(tx);
     tx.id = docRef.id;
-    transactions.unshift(tx);
     await addNotification('New transaction logged', `${tx.service} - KES ${tx.amount} (${tx.payment})`, 'transaction');
+    // Reload from Firestore to ensure no duplicates
+    await reloadTransactions();
     return tx;
 }
 
@@ -249,8 +250,9 @@ async function addExpense(ex) {
     ex.createdBy = currentUser.uid;
     const docRef = await db.collection('expenses').add(ex);
     ex.id = docRef.id;
-    expenses.unshift(ex);
     await addNotification('Expense recorded', `${ex.category} - KES ${ex.amount}`, 'expense');
+    // Reload from Firestore to ensure no duplicates
+    await reloadExpenses();
     return ex;
 }
 
@@ -483,6 +485,27 @@ function initApp() {
     renderNotifications();
     renderServices();
     updateNotificationBadge();
+}
+
+
+// Reload just transactions (no duplicates)
+async function reloadTransactions() {
+    try {
+        const txSnap = await db.collection('transactions').orderBy('createdAt', 'desc').get();
+        transactions = txSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+        console.error('Error reloading transactions:', err);
+    }
+}
+
+// Reload just expenses (no duplicates)
+async function reloadExpenses() {
+    try {
+        const exSnap = await db.collection('expenses').orderBy('createdAt', 'desc').get();
+        expenses = exSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+        console.error('Error reloading expenses:', err);
+    }
 }
 
 // ============================================
